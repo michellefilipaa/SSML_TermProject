@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 easypackages::packages ("sf", "sp", "spdep", "spatialreg", "GWmodel", "tmap", "mapview", "car", "RColorBrewer", 
-                        "cowplot", "leafsync", "leaflet.extras2", "mapview", "tidyverse")
+                        "cowplot", "leafsync", "leaflet.extras2", "mapview", "tidyverse", "patchwork")
 ```
 
 ```{r}
@@ -33,15 +33,11 @@ plot(toronto)
 ```{r}
 # the AREA_NAME is the name of the neighbourhood
 # we need to clean the text so it is the same as all the other files
-toronto$AREA_NAME <- tolower(toronto$AREA_NAME)
+toronto$AREA_NAME <- tolower(trimws(gsub("\\(\\d+\\)", "", toronto$AREA_NAME)))
 toronto$AREA_NAME <- gsub("\\(\\d+\\)", "", toronto$AREA_NAME)
 toronto$AREA_NAME <- gsub("[[:punct:]]", "", toronto$AREA_NAME)
 
 names(toronto)[names(toronto) == "AREA_NAME"] <- "neighbourhood"
-```
-
-```{r}
-view(toronto)
 ```
 
 ##  Census Files
@@ -72,4 +68,33 @@ major_crimes <- read.csv(crimes_path)
 
 ```{r}
 major_crimes
+```
+
+## Plot Number of Crimes by Neighbourhood in 2013
+
+```{r}
+# Loop through each year
+for (year in 2013:2022) {
+    
+    file_path <- file.path(project_directory, "data", "crime", "by_neighbourhood", paste0(year, "crimes_per_neighbourhood.csv"))
+   
+    # Check if the file exists
+    if (file.exists(file_path)) {
+        crimes <- read.csv(file_path)
+        
+        # Perform spatial join between Toronto neighbourhoods and crime data
+        merged_data <- merge(toronto, crimes, by.x = "neighbourhood", by.y = "NEIGHBOURHOOD_140", all.x = TRUE)
+        
+        # Create plot for the current year
+        plot <- ggplot() + 
+                    geom_sf(data = merged_data, aes(fill = num_crimes)) +  # Fill polygons based on the number of crimes
+                    scale_fill_gradient(name = "Number of Crimes", low = "lightblue", high = "darkred") +  # Adjust fill color gradient
+                    labs(title = paste("Crime Data", year))
+        
+        # Print or display the plot
+        print(plot)
+    } else {
+        warning(paste("File not found for year", year))
+    }
+}
 ```

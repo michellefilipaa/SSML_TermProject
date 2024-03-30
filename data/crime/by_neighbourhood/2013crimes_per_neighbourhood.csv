@@ -1,125 +1,125 @@
 ,NEIGHBOURHOOD_140,num_crimes
-0,Waterfront Communities-The Island,29
-1,NSA,27
-2,Moss Park,15
-3,Clairlea-Birchmount,14
-4,West Humber-Clairville,13
-5,Dorset Park,13
-6,Parkwoods-Donalda,13
-7,West Hill,13
-8,North St.James Town,12
-9,O'Connor-Parkview,12
-10,York University Heights,11
-11,Rouge,10
-12,Annex,10
-13,Mimico (includes Humber Bay Shores),9
-14,Agincourt South-Malvern West,9
-15,Bay Street Corridor,9
-16,Church-Yonge Corridor,9
-17,Willowdale East,9
-18,Humber Summit,9
-19,Trinity-Bellwoods,9
-20,Yorkdale-Glen Park,9
-21,Kensington-Chinatown,8
-22,Malvern,8
-23,Mount Olive-Silverstone-Jamestown,8
-24,Birchcliffe-Cliffside,8
-25,Downsview-Roding-CFB,8
-26,Glenfield-Jane Heights,8
-27,Woburn,8
-28,Ionview,8
-29,Bendale,7
-30,Islington-City Centre West,7
-31,Taylor-Massey,7
-32,Englemount-Lawrence,7
-33,Newtonbrook West,7
-34,Highland Creek,7
-35,South Riverdale,7
-36,Eglinton East,7
-37,Kennedy Park,7
-38,Black Creek,7
-39,Morningside,6
-40,Niagara,6
-41,The Beaches,6
-42,Scarborough Village,6
-43,Corso Italia-Davenport,5
-44,Bayview Village,5
-45,Wexford/Maryvale,5
-46,Regent Park,5
-47,Banbury-Don Mills,5
-48,Brookhaven-Amesbury,5
-49,Clanton Park,5
-50,Victoria Village,5
-51,Milliken,4
-52,Runnymede-Bloor West Village,4
-53,Pelmo Park-Humberlea,4
-54,Caledonia-Fairbank,4
-55,Woodbine Corridor,4
-56,Roncesvalles,4
-57,Tam O'Shanter-Sullivan,4
-58,Mount Pleasant West,4
-59,Oakridge,4
-60,Palmerston-Little Italy,4
-61,Dovercourt-Wallace Emerson-Junction,3
-62,Pleasant View,3
-63,High Park North,3
-64,L'Amoreaux,3
-65,Weston,3
-66,Dufferin Grove,3
-67,Weston-Pellam Park,3
-68,Eringate-Centennial-West Deane,3
-69,Rockcliffe-Smythe,3
-70,Kingsview Village-The Westway,3
-71,Humbermede,3
-72,Willowridge-Martingrove-Richview,3
-73,Danforth East York,3
-74,Yonge-Eglinton,3
-75,High Park-Swansea,3
-76,Westminster-Branson,2
-77,Steeles,2
-78,Bridle Path-Sunnybrook-York Mills,2
-79,Old East York,2
-80,Cabbagetown-South St.James Town,2
-81,Forest Hill North,2
-82,Woodbine-Lumsden,2
-83,Elms-Old Rexdale,2
-84,Lambton Baby Point,2
-85,Agincourt North,2
-86,Cliffcrest,2
-87,Bedford Park-Nortown,2
-88,Maple Leaf,2
-89,East End-Danforth,2
-90,Thistletown-Beaumond Heights,2
-91,New Toronto,2
-92,Thorncliffe Park,2
-93,Playter Estates-Danforth,2
-94,Forest Hill South,2
-95,Don Valley Village,2
-96,South Parkdale,2
-97,Alderwood,2
-98,Casa Loma,2
-99,Stonegate-Queensway,2
-100,Briar Hill-Belgravia,2
-101,Lawrence Park South,1
-102,Markland Wood,1
-103,Newtonbrook East,1
-104,Humewood-Cedarvale,1
-105,Lawrence Park North,1
-106,Wychwood,1
-107,University,1
-108,Little Portugal,1
-109,North Riverdale,1
-110,Mount Dennis,1
-111,Princess-Rosethorn,1
-112,Bayview Woods-Steeles,1
-113,Rosedale-Moore Park,1
-114,Kingsway South,1
-115,St.Andrew-Windfields,1
-116,Lansing-Westgate,1
-117,Broadview North,1
-118,Junction Area,1
-119,Rexdale-Kipling,1
-120,Henry Farm,1
-121,Keelesdale-Eglinton West,1
-122,Leaside-Bennington,1
-123,Greenwood-Coxwell,1
+0,waterfront communitiesthe island,29
+1,nsa,27
+2,moss park,15
+3,clairleabirchmount,14
+4,west humberclairville,13
+5,dorset park,13
+6,parkwoodsdonalda,13
+7,west hill,13
+8,north stjames town,12
+9,oconnorparkview,12
+10,york university heights,11
+11,rouge,10
+12,annex,10
+13,mimico includes humber bay shores,9
+14,agincourt southmalvern west,9
+15,bay street corridor,9
+16,churchyonge corridor,9
+17,willowdale east,9
+18,humber summit,9
+19,trinitybellwoods,9
+20,yorkdaleglen park,9
+21,kensingtonchinatown,8
+22,malvern,8
+23,mount olivesilverstonejamestown,8
+24,birchcliffecliffside,8
+25,downsviewrodingcfb,8
+26,glenfieldjane heights,8
+27,woburn,8
+28,ionview,8
+29,bendale,7
+30,islingtoncity centre west,7
+31,taylormassey,7
+32,englemountlawrence,7
+33,newtonbrook west,7
+34,highland creek,7
+35,south riverdale,7
+36,eglinton east,7
+37,kennedy park,7
+38,black creek,7
+39,morningside,6
+40,niagara,6
+41,the beaches,6
+42,scarborough village,6
+43,corso italiadavenport,5
+44,bayview village,5
+45,wexfordmaryvale,5
+46,regent park,5
+47,banburydon mills,5
+48,brookhavenamesbury,5
+49,clanton park,5
+50,victoria village,5
+51,milliken,4
+52,runnymedebloor west village,4
+53,pelmo parkhumberlea,4
+54,caledoniafairbank,4
+55,woodbine corridor,4
+56,roncesvalles,4
+57,tam oshantersullivan,4
+58,mount pleasant west,4
+59,oakridge,4
+60,palmerstonlittle italy,4
+61,dovercourtwallace emersonjunction,3
+62,pleasant view,3
+63,high park north,3
+64,lamoreaux,3
+65,weston,3
+66,dufferin grove,3
+67,westonpellam park,3
+68,eringatecentennialwest deane,3
+69,rockcliffesmythe,3
+70,kingsview villagethe westway,3
+71,humbermede,3
+72,willowridgemartingroverichview,3
+73,danforth east york,3
+74,yongeeglinton,3
+75,high parkswansea,3
+76,westminsterbranson,2
+77,steeles,2
+78,bridle pathsunnybrookyork mills,2
+79,old east york,2
+80,cabbagetownsouth stjames town,2
+81,forest hill north,2
+82,woodbinelumsden,2
+83,elmsold rexdale,2
+84,lambton baby point,2
+85,agincourt north,2
+86,cliffcrest,2
+87,bedford parknortown,2
+88,maple leaf,2
+89,east enddanforth,2
+90,thistletownbeaumond heights,2
+91,new toronto,2
+92,thorncliffe park,2
+93,playter estatesdanforth,2
+94,forest hill south,2
+95,don valley village,2
+96,south parkdale,2
+97,alderwood,2
+98,casa loma,2
+99,stonegatequeensway,2
+100,briar hillbelgravia,2
+101,lawrence park south,1
+102,markland wood,1
+103,newtonbrook east,1
+104,humewoodcedarvale,1
+105,lawrence park north,1
+106,wychwood,1
+107,university,1
+108,little portugal,1
+109,north riverdale,1
+110,mount dennis,1
+111,princessrosethorn,1
+112,bayview woodssteeles,1
+113,rosedalemoore park,1
+114,kingsway south,1
+115,standrewwindfields,1
+116,lansingwestgate,1
+117,broadview north,1
+118,junction area,1
+119,rexdalekipling,1
+120,henry farm,1
+121,keelesdaleeglinton west,1
+122,leasidebennington,1
+123,greenwoodcoxwell,1
