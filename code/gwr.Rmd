@@ -181,3 +181,22 @@ for (year in seq(2011, 2021, by = 5)) {
 **Analysis:** The population density does not change much over the years.
 
 *\*\*comment on population density compared to crime rates*
+
+# Spatial Autocorrelation
+
+```{r}
+crimes2022 <- read.csv(file.path(project_directory, "data", "crime", "by_neighbourhood", "2022crimes_per_neighbourhood.csv"))
+crimes2022 <- crimes2022[crimes2022$NEIGHBOURHOOD_140 != "nsa", ]
+```
+
+```{r}
+toronto_nbq <- poly2nb(toronto, queen=TRUE)
+toronto_listw <- nb2listw(toronto_nbq)
+morans <- moran.test(crimes2022$num_crimes, listw=toronto_listw)
+```
+
+```{r}
+morans
+```
+
+**Analysis:**
