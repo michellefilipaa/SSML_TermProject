@@ -40,7 +40,9 @@ toronto$AREA_NAME <- gsub("[[:punct:]]", "", toronto$AREA_NAME)
 names(toronto)[names(toronto) == "AREA_NAME"] <- "neighbourhood"
 ```
 
-##  Census Files
+------------------------------------------------------------------------
+
+## Census Files
 
 The census files contain 63 variables that will be used as indicators.
 
@@ -53,11 +55,14 @@ census2016 <- read.csv(census2016_path)
 
 census2021_path <- file.path(project_directory, "data", "census2021.csv")
 census2021 <- read.csv(census2021_path)
+colnames(census2021)[colnames(census2021) == "Neighbourhoods"] <- "X"
 ```
 
 ```{r}
-names(census2011)
+names(census2021)
 ```
+
+------------------------------------------------------------------------
 
 ## Crime Data
 
@@ -70,7 +75,9 @@ major_crimes <- read.csv(crimes_path)
 major_crimes
 ```
 
-## Plot Number of Crimes by Neighbourhood in 2013
+# Exploratory Spatial Data Analysis
+
+## Plot Number of Crimes by Neighbourhood
 
 ```{r}
 # Loop through each year
@@ -87,8 +94,8 @@ for (year in 2013:2022) {
         
         # Create plot for the current year
         plot <- ggplot() + 
-                    geom_sf(data = merged_data, aes(fill = num_crimes)) +  # Fill polygons based on the number of crimes
-                    scale_fill_gradient(name = "Number of Crimes", low = "lightblue", high = "darkred") +  # Adjust fill color gradient
+                    geom_sf(data = merged_data, aes(fill = num_crimes)) + 
+                    scale_fill_gradient(name = "Number of Crimes", low = "lightblue", high = "darkred", limits= c(0, 2000)) +  
                     labs(title = paste("Crime Data", year))
         
         # Print or display the plot
@@ -98,3 +105,79 @@ for (year in 2013:2022) {
     }
 }
 ```
+
+**Analysis:**
+
+------------------------------------------------------------------------
+
+## Plot of low-income percent
+
+```{r}
+# Loop through each year
+for (year in seq(2011, 2021, by = 5)) {
+    if (year == 2011) {
+        census <- census2011
+    } else if (year == 2016) {
+        census <- census2016
+    } else {
+        census <- census2021
+    }
+    low_income_percent_only <- select(census, low_income_percent, X)
+   
+   
+        
+      # Perform spatial join between Toronto neighbourhoods and census data
+      merged_data <- merge(toronto, low_income_percent_only, by.x = "neighbourhood", by.y = "X", all.x = TRUE)
+        
+        # Create plot for the current year
+        plot <- ggplot() + 
+                    geom_sf(data = merged_data, aes(fill = low_income_percent)) + 
+                    scale_fill_gradient(name = "Low-income rate", low = "lightblue", high = "darkred", limits=c(0, 100)) +  
+                    labs(title = paste("Low-income rate", year))
+        
+        print(plot)
+}
+```
+
+**Analysis:**
+
+------------------------------------------------------------------------
+
+## Population Density Calculation
+
+```{r}
+toronto$area <- st_area(toronto)
+```
+
+```{r}
+census2011$population_density <- census2011$total_population/toronto$area
+census2016$population_density <- census2016$total_population/toronto$area
+census2021$population_density <- census2021$total_population/toronto$area
+```
+
+```{r}
+for (year in seq(2011, 2021, by = 5)) {
+    if (year == 2011) {
+        census <- census2011
+    } else if (year == 2016) {
+        census <- census2016
+    } else {
+        census <- census2021
+    }
+    pop_density <- select(census, population_density, X)
+   
+      merged_data <- merge(toronto, low_income_percent_only, by.x = "neighbourhood", by.y = "X", all.x = TRUE)
+        
+        # Create plot for the current year
+        plot <- ggplot() + 
+                    geom_sf(data = merged_data, aes(fill = low_income_percent)) + 
+                    scale_fill_gradient(name = "Population Density", low = "lightblue", high = "darkred", limits=c(0, 100)) +  
+                    labs(title = paste("Population Density", year))
+        
+        print(plot)
+}
+```
+
+**Analysis:** The population density does not change much over the years.
+
+*\*\*comment on population density compared to crime rates*
