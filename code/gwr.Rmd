@@ -19,6 +19,8 @@ project_directory <- dirname(getwd())
 
 # Loading Data
 
+## Toronto Map
+
 ```{r}
 toronto_geojson_file <- file.path(project_directory, "data", "geodata", "neighbourhoods.geojson")
 toronto <- st_read(toronto_geojson_file)
@@ -29,5 +31,45 @@ plot(toronto)
 ```
 
 ```{r}
+# the AREA_NAME is the name of the neighbourhood
+# we need to clean the text so it is the same as all the other files
+toronto$AREA_NAME <- tolower(toronto$AREA_NAME)
+toronto$AREA_NAME <- gsub("\\(\\d+\\)", "", toronto$AREA_NAME)
+toronto$AREA_NAME <- gsub("[[:punct:]]", "", toronto$AREA_NAME)
 
+names(toronto)[names(toronto) == "AREA_NAME"] <- "neighbourhood"
+```
+
+```{r}
+view(toronto)
+```
+
+##  Census Files
+
+The census files contain 63 variables that will be used as indicators.
+
+```{r}
+census2011_path <- file.path(project_directory, "data", "census2011.csv")
+census2011 <- read.csv(census2011_path)
+
+census2016_path <- file.path(project_directory, "data", "census2016.csv")
+census2016 <- read.csv(census2016_path)
+
+census2021_path <- file.path(project_directory, "data", "census2021.csv")
+census2021 <- read.csv(census2021_path)
+```
+
+```{r}
+names(census2011)
+```
+
+## Crime Data
+
+```{r}
+crimes_path <- file.path(project_directory, "data", "crime", "major_crimes.csv")
+major_crimes <- read.csv(crimes_path)
+```
+
+```{r}
+major_crimes
 ```
