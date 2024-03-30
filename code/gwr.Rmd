@@ -1,0 +1,33 @@
+---
+title: "GWR"
+output: html_document
+date: "2024-03-30"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+easypackages::packages ("sf", "sp", "spdep", "spatialreg", "GWmodel", "tmap", "mapview", "car", "RColorBrewer", 
+                        "cowplot", "leafsync", "leaflet.extras2", "mapview", "tidyverse")
+```
+
+```{r}
+project_directory <- dirname(getwd())
+```
+
+# Loading Data
+
+```{r}
+toronto_geojson_file <- file.path(project_directory, "data", "geodata", "neighbourhoods.geojson")
+toronto <- st_read(toronto_geojson_file)
+```
+
+```{r}
+plot(toronto)
+```
+
+```{r}
+
+```
