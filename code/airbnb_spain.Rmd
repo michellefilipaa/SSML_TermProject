@@ -117,11 +117,47 @@ gir_listings_sf_sample <- sample_frac(gir_listings_sf, size = 1000/nrow(gir_list
 ```
 
 ```{r}
-girona_nbq <- poly2nb(gir_listings_sf_sample, queen=TRUE)
-girona_listw <- nb2listw(girona_nbq)
+# Compute centroids of polygons
+centroids <- st_centroid(gir_listings_sf_sample)
+
+# Compute k nearest neighbors for centroids
+k <- 5  # Number of nearest neighbors
+girona_knn <- knn2nb(knearneigh(centroids, k = k))
+
+# Construct neighbor list weights
+girona_listw <- nb2listw(girona_knn, style = "W")
 ```
 
-## 
+```{r}
+# girona_nbq <- poly2nb(gir_listings_sf_sample, queen=TRUE)
+# girona_listw <- nb2listw(girona_nbq, style = "W")
+```
+
+## Trying to combine Barcelona and Girona
+
+```{r}
+library(dplyr)
+
+# Take 500 observations from gir_listings_sf_sample
+gir_sample <- gir_listings_sf_sample %>%
+  sample_n(500, replace = FALSE)
+
+# Take 500 observations from bar_listings_sf_sample
+bar_sample <- bar_listings_sf_sample %>%
+  sample_n(500, replace = FALSE)
+
+# Combine the samples
+combined_sample <- bind_rows(gir_sample, bar_sample)
+```
+
+```{r}
+# Compute centroids of polygons
+centroids2 <- st_centroid(combined_sample)
+
+girbar_knn <- knn2nb(knearneigh(centroids2, k = k))
+
+girona_bar_listw <- nb2listw(girbar_knn, style = "W")
+```
 
 # Geographically Weighted Regression
 
@@ -136,6 +172,16 @@ error_model_b = errorsarlm(eq, data=bar_listings_sf_sample, listw= barcelona_lis
 summary(error_model_b, Nagelkerke=T)
 ```
 
-```{r}
+## Girona Error Model
 
+```{r}
+error_model_g = errorsarlm(eq, data=gir_listings_sf_sample, listw= girona_listw, zero.policy=TRUE)
+summary(error_model_g, Nagelkerke=T)
+```
+
+## Girona and Barcelona Error Model
+
+```{r}
+error_model_g_b = errorsarlm(eq, data=combined_sample, listw= girona_bar_listw, zero.policy=TRUE)
+summary(error_model_g_b, Nagelkerke=T)
 ```
