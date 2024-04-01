@@ -1,0 +1,86 @@
+---
+title: "Airbnb"
+output: html_document
+date: "2024-04-01"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+easypackages::packages ("sf", "sp", "spdep", "spatialreg", "GWmodel", "tmap", "mapview", "car", "RColorBrewer", 
+                        "cowplot", "leafsync", "leaflet.extras2", "mapview", "tidyverse", "patchwork", "GWRsel")
+```
+
+```{r}
+project_directory <- dirname(getwd())
+```
+
+# Loading Data
+
+## Amsterdam
+
+```{r}
+amsterdam_map <- st_read(file.path(project_directory, "data", "airbnb", "amsterdam", "neighbourhoods.geojson"))
+```
+
+```{r}
+plot(amsterdam_map)
+```
+
+```{r}
+ams_listings <- read.csv(file.path(project_directory, "data" , "airbnb", "amsterdam", "listings_cleaned.csv"))
+```
+
+```{r}
+ams_listings_with_geom <- merge(ams_listings, amsterdam_map, by.x = "neighbourhood", by.y = "neighbourhood", all.x = TRUE)
+ams_listings_sf <- st_as_sf(ams_listings_with_geom)
+st_crs(ams_listings_sf) <- st_crs(amsterdam_map)
+```
+
+```{r}
+ams_listings_sf_sample <- sample_frac(ams_listings_sf, size = 1000/nrow(ams_listings_sf), replace = FALSE)
+```
+
+```{r}
+amsterdam_nbq <- poly2nb(ams_listings_sf_sample, queen=TRUE)
+```
+
+```{r}
+amsterdam_listw <- nb2listw(amsterdam_nbq, zero.policy = TRUE)
+```
+
+## Barcelona
+
+```{r}
+barcelona_map <- st_read(file.path(project_directory, "data", "airbnb", "barcelona", "neighbourhoods.geojson"))
+```
+
+```{r}
+plot(barcelona_map)
+```
+
+```{r}
+bar_listings <- read.csv(file.path(project_directory, "data" ,"airbnb", "barcelona", "listings_cleaned.csv"))
+```
+
+```{r}
+bar_listings
+```
+
+```{r}
+barcelona_nbq <- poly2nb(barcelona_map, queen=TRUE)
+barcelona_listw <- nb2listw(barcelona_nbq)
+```
+
+# Geographically Weighted Regression
+
+```{r}
+eq <- price ~ latitude + longitude + room_type + minimum_nights + number_of_reviews
+```
+
+```{r}
+error_model = errorsarlm(eq, data=ams_listings_sf_sample, listw= amsterdam_listw, zero.policy=TRUE)
+summary(error_model, Nagelkerke=T)
+```

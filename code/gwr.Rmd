@@ -27,10 +27,6 @@ toronto <- st_read(toronto_geojson_file)
 ```
 
 ```{r}
-plot(toronto)
-```
-
-```{r}
 # the AREA_NAME is the name of the neighbourhood
 # we need to clean the text so it is the same as all the other files
 toronto$AREA_NAME <- tolower(trimws(gsub("\\(\\d+\\)", "", toronto$AREA_NAME)))
@@ -48,32 +44,20 @@ The census files contain 63 variables that will be used as indicators.
 
 ```{r}
 census2011_path <- file.path(project_directory, "data", "census2011.csv")
-census2011 <- read.csv(census2011_path)
+census2011 <- read.csv(census2011_path, row.names = 1)
 
 census2016_path <- file.path(project_directory, "data", "census2016.csv")
-census2016 <- read.csv(census2016_path)
+census2016 <- read.csv(census2016_path, row.names = 1)
 
 census2021_path <- file.path(project_directory, "data", "census2021.csv")
-census2021 <- read.csv(census2021_path)
-colnames(census2021)[colnames(census2021) == "Neighbourhoods"] <- "X"
+census2021 <- read.csv(census2021_path, row.names = 1)
 ```
 
 ```{r}
-names(census2021)
+names(census2016)
 ```
 
 ------------------------------------------------------------------------
-
-## Crime Data
-
-```{r}
-crimes_path <- file.path(project_directory, "data", "crime", "major_crimes.csv")
-major_crimes <- read.csv(crimes_path)
-```
-
-```{r}
-major_crimes
-```
 
 # Exploratory Spatial Data Analysis
 
@@ -113,6 +97,10 @@ for (year in 2013:2022) {
 ## Plot of low-income percent
 
 ```{r}
+census2016
+```
+
+```{r}
 # Loop through each year
 for (year in seq(2011, 2021, by = 5)) {
     if (year == 2011) {
@@ -122,12 +110,12 @@ for (year in seq(2011, 2021, by = 5)) {
     } else {
         census <- census2021
     }
-    low_income_percent_only <- select(census, low_income_percent, X)
+    low_income_percent_only <- select(census, low_income_percent, neighbourhood)
    
    
         
       # Perform spatial join between Toronto neighbourhoods and census data
-      merged_data <- merge(toronto, low_income_percent_only, by.x = "neighbourhood", by.y = "X", all.x = TRUE)
+      merged_data <- merge(toronto, low_income_percent_only, by.x = "neighbourhood", by.y="neighbourhood", all.x = TRUE)
         
         # Create plot for the current year
         plot <- ggplot() + 
@@ -164,9 +152,9 @@ for (year in seq(2011, 2021, by = 5)) {
     } else {
         census <- census2021
     }
-    pop_density <- select(census, population_density, X)
+    pop_density <- select(census, population_density, neighbourhood)
    
-      merged_data <- merge(toronto, low_income_percent_only, by.x = "neighbourhood", by.y = "X", all.x = TRUE)
+      merged_data <- merge(toronto, low_income_percent_only, by.x = "neighbourhood", by.y = "neighbourhood", all.x = TRUE)
         
         # Create plot for the current year
         plot <- ggplot() + 
@@ -182,21 +170,18 @@ for (year in seq(2011, 2021, by = 5)) {
 
 *\*\*comment on population density compared to crime rates*
 
-# Spatial Autocorrelation
-
-```{r}
-crimes2022 <- read.csv(file.path(project_directory, "data", "crime", "by_neighbourhood", "2022crimes_per_neighbourhood.csv"))
-crimes2022 <- crimes2022[crimes2022$NEIGHBOURHOOD_140 != "nsa", ]
-```
+# Geographically Weighted Regression
 
 ```{r}
 toronto_nbq <- poly2nb(toronto, queen=TRUE)
 toronto_listw <- nb2listw(toronto_nbq)
-morans <- moran.test(crimes2022$num_crimes, listw=toronto_listw)
 ```
 
 ```{r}
-morans
+eq_crime <- num_crimes ~ population_density + low_income_percent + household_income
 ```
 
-**Analysis:**
+```{r}
+error_model = errorsarlm(eq_crime, data=census2016, listw=toronto_listw, zero.policy = TRUE)
+summary(error_model, Nagelkerke=T)
+```
