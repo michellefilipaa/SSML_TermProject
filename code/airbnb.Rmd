@@ -17,7 +17,7 @@ easypackages::packages ("sf", "sp", "spdep", "spatialreg", "GWmodel", "tmap", "m
 project_directory <- dirname(getwd())
 ```
 
-# Loading Data
+# Data
 
 ## Amsterdam
 
@@ -66,11 +66,22 @@ bar_listings <- read.csv(file.path(project_directory, "data" ,"airbnb", "barcelo
 ```
 
 ```{r}
-bar_listings
+bar_listings_with_geom <- merge(bar_listings, barcelona_map, by.x = "neighbourhood", by.y = "neighbourhood", all.x = TRUE)
+bar_listings_sf <- st_as_sf(bar_listings_with_geom)
+st_crs(bar_listings_sf) <- st_crs(barcelona_map)
 ```
 
 ```{r}
-barcelona_nbq <- poly2nb(barcelona_map, queen=TRUE)
+# this geometry seems to have an error
+bar_listings_sf <- bar_listings_sf[bar_listings_sf$neighbourhood_group.y != 'Sant Martí', ]
+```
+
+```{r}
+bar_listings_sf_sample <- sample_frac(bar_listings_sf, size = 1000/nrow(ams_listings_sf), replace = FALSE)
+```
+
+```{r}
+barcelona_nbq <- poly2nb(bar_listings_sf_sample, queen=TRUE)
 barcelona_listw <- nb2listw(barcelona_nbq)
 ```
 
@@ -80,7 +91,26 @@ barcelona_listw <- nb2listw(barcelona_nbq)
 eq <- price ~ latitude + longitude + room_type + minimum_nights + number_of_reviews
 ```
 
+## Amsterdam Error Model
+
 ```{r}
 error_model = errorsarlm(eq, data=ams_listings_sf_sample, listw= amsterdam_listw, zero.policy=TRUE)
 summary(error_model, Nagelkerke=T)
+```
+
+```{r}
+mcSEM_global_ams <-moran.mc(error_model$residuals, amsterdam_listw, 2999, alternative="greater")
+
+plot(mcSEM_global_ams)
+```
+
+## Barcelona Error Model
+
+```{r}
+error_model_b = errorsarlm(eq, data=bar_listings_sf_sample, listw= barcelona_listw, zero.policy=TRUE)
+summary(error_model_b, Nagelkerke=T)
+```
+
+```{r}
+
 ```
