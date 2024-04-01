@@ -1,4 +1,4 @@
-,NEIGHBOURHOOD_140,num_crimes
+,neighbourhood,num_crimes
 0,agincourt north,566
 1,agincourt southmalvern west,1002
 2,alderwood,373
@@ -18,7 +18,7 @@
 16,bridle pathsunnybrookyork mills,486
 17,broadview north,308
 18,brookhavenamesbury,761
-19,cabbagetownsouth stjames town,681
+19,cabbagetownsouth st james town,681
 20,caledoniafairbank,295
 21,casa loma,382
 22,centennial scarborough,264
@@ -88,7 +88,7 @@
 86,newtonbrook west,1325
 87,niagara,1225
 88,north riverdale,405
-89,north stjames town,993
+89,north st james town,993
 90,nsa,1768
 91,oakridge,785
 92,oakwood village,667
