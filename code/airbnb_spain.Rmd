@@ -185,3 +185,5 @@ summary(error_model_g, Nagelkerke=T)
 error_model_g_b = errorsarlm(eq, data=combined_sample, listw= girona_bar_listw, zero.policy=TRUE)
 summary(error_model_g_b, Nagelkerke=T)
 ```
+
+need to find a way to combine multiple results because it takes ages to run (so run it in batches but get one final summary)

@@ -34,9 +34,17 @@ toronto$AREA_NAME <- gsub("\\(\\d+\\)", "", toronto$AREA_NAME)
 toronto$AREA_NAME <- gsub("[[:punct:]]", "", toronto$AREA_NAME)
 
 names(toronto)[names(toronto) == "AREA_NAME"] <- "neighbourhood"
+
+
+toronto$neighbourhood[which(toronto$neighbourhood == 'cabbagetownsouth stjames town')] <- 'cabbagetownsouth st james town'
+toronto$neighbourhood[which(toronto$neighbourhood == 'north stjames town')] <- 'north st james town'
 ```
 
 ------------------------------------------------------------------------
+
+```{r}
+toronto$neighbourhood
+```
 
 ## Census Files
 
@@ -57,9 +65,51 @@ census2021 <- read.csv(census2021_path, row.names = 1)
 names(census2016)
 ```
 
-------------------------------------------------------------------------
+## Add Population Density
+
+```{r}
+toronto$area <- st_area(toronto)
+```
+
+```{r}
+census2011$population_density <- census2011$total_population/toronto$area
+census2016$population_density <- census2016$total_population/toronto$area
+census2021$population_density <- census2021$total_population/toronto$area
+```
+
+## Add Toronto Geometries to Census 2011
+
+```{r}
+census2011_with_geom <- merge(census2011, toronto, by.x = "neighbourhood", by.y = "neighbourhood", all.x = TRUE)
+census2011_sf <- st_as_sf(census2011_with_geom)
+st_crs(census2011_sf) <- st_crs(toronto)
+```
+
+## Add Toronto Geometries to Census 2016
+
+```{r}
+census2016_with_geom <- merge(census2016, toronto, by.x = "neighbourhood", by.y = "neighbourhood", all.x = TRUE)
+census2016_sf <- st_as_sf(census2016_with_geom)
+st_crs(census2016_sf) <- st_crs(toronto)
+```
+
+## Add Toronto Geometries to Census 2021
+
+```{r}
+census2021_with_geom <- merge(census2021, toronto, by.x = "neighbourhood", by.y = "neighbourhood", all.x = TRUE)
+census2021_sf <- st_as_sf(census2021_with_geom)
+st_crs(census2021_sf) <- st_crs(toronto)
+```
 
 # Exploratory Spatial Data Analysis
+
+```{r}
+# change fill to see different maps
+ggplot() +
+  geom_sf(data = census2011_sf, aes(fill = population_density)) +
+  scale_fill_viridis_c() +
+  theme_minimal()
+```
 
 ## Plot Number of Crimes by Neighbourhood
 
@@ -97,10 +147,6 @@ for (year in 2013:2022) {
 ## Plot of low-income percent
 
 ```{r}
-census2016
-```
-
-```{r}
 # Loop through each year
 for (year in seq(2011, 2021, by = 5)) {
     if (year == 2011) {
@@ -131,57 +177,102 @@ for (year in seq(2011, 2021, by = 5)) {
 
 ------------------------------------------------------------------------
 
-## Population Density Calculation
+# Spatial Autocorrelation
 
 ```{r}
-toronto$area <- st_area(toronto)
+names(census_sf)
 ```
 
 ```{r}
-census2011$population_density <- census2011$total_population/toronto$area
-census2016$population_density <- census2016$total_population/toronto$area
-census2021$population_density <- census2021$total_population/toronto$area
-```
-
-```{r}
-for (year in seq(2011, 2021, by = 5)) {
-    if (year == 2011) {
-        census <- census2011
-    } else if (year == 2016) {
-        census <- census2016
-    } else {
-        census <- census2021
-    }
-    pop_density <- select(census, population_density, neighbourhood)
-   
-      merged_data <- merge(toronto, low_income_percent_only, by.x = "neighbourhood", by.y = "neighbourhood", all.x = TRUE)
-        
-        # Create plot for the current year
-        plot <- ggplot() + 
-                    geom_sf(data = merged_data, aes(fill = low_income_percent)) + 
-                    scale_fill_gradient(name = "Population Density", low = "lightblue", high = "darkred", limits=c(0, 100)) +  
-                    labs(title = paste("Population Density", year))
-        
-        print(plot)
-}
-```
-
-**Analysis:** The population density does not change much over the years.
-
-*\*\*comment on population density compared to crime rates*
-
-# Geographically Weighted Regression
-
-```{r}
-toronto_nbq <- poly2nb(toronto, queen=TRUE)
+eq_crime <- num_crimes ~ unemployed + household_income + no_certificate_diploma_degree + two_plus_person_household + pop_25_to_29
+toronto_nbq <- poly2nb(census2016_sf, queen=TRUE)
 toronto_listw <- nb2listw(toronto_nbq)
 ```
 
 ```{r}
-eq_crime <- num_crimes ~ population_density + low_income_percent + household_income
+# Compute neighbors for each polygon
+nb <- poly2nb(census2016_sf)
+
+# Create spatial weights matrix
+listw <- nb2listw(nb, style="W")
+
+moran_crime <- moran.test(census2016$unemployed, listw)
+
+moran_crime
+```
+
+## Linear Model
+
+```{r}
+#run the model
+linearMod <- lm (eq_crime, data = census2016_sf) 
+
+#get summary
+summary(linearMod)
+
+mc_global_OLS <- moran.mc(linearMod$residuals, toronto_listw, 2999, zero.policy= TRUE, alternative="greater")
+
+#plot the  Moran’s I
+plot(mc_global_OLS)
+
+mc_global_OLS
 ```
 
 ```{r}
-error_model = errorsarlm(eq_crime, data=census2016, listw=toronto_listw, zero.policy = TRUE)
-summary(error_model, Nagelkerke=T)
+vif(linearMod)
+```
+
+**NOTE: This needs to be below 5 \^\^**
+
+##  Lagrange Multiplier Tests
+
+```{r}
+
+```
+
+## LISA
+
+```{r}
+gm_crime_LISA <- localmoran(census2016_sf$num_crimes, listw)  #using Queen's contiguity 
+summary(gm_crime_LISA)
+```
+
+```{r}
+# to visualize this statistic the relevant information needs to be extracted
+# extract local Moran's I values and attache them to our sf object 
+census2016_sf$gm_crime_LISA <- gm_crime_LISA[,1] 
+# extract p-values
+census2016_sf$gm_crime_LISA <- gm_crime_LISA[,5] 
+
+#Here we can map the local Moran's I with t-map, and show which areas have significant clusters
+map_LISA <- tm_shape(census2016_sf) + 
+  tm_polygons(col= "gm_crime_LISA", title= "Local Moran’s I", midpoint=0,
+              palette = "RdYlBu", breaks= c(-10, -5, 0, 5, 10, 20)) 
+map_LISA_p <- tm_shape(census2016_sf) + 
+  tm_polygons(col= "gm_crime_LISA", title= "p-values",
+              breaks= c(0, 0.01, 0.05, 1), palette = "Reds") 
+
+tmap_arrange(map_LISA, map_LISA_p)
+```
+
+**Analysis:**
+
+# Geographically Weighted Regression
+
+```{r}
+
+```
+
+## Adaptive Spatial Kernel
+
+```{r}
+
+```
+
+```{r}
+abw <- bw.gwr(eq_crime,
+             approach = "AIC",
+             adaptive = TRUE,
+             kernel="gaussian",
+             data=census_sf) #give the sp data created earlier
 ```
