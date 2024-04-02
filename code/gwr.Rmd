@@ -224,6 +224,12 @@ vif(linearMod)
 
 **NOTE: This needs to be below 5 \^\^**
 
+```{r}
+census2016_sf$res_lm <- residuals(linearMod)
+lmres <- qtm(census2016_sf, "res_lm")
+lmres
+```
+
 ##  Lagrange Multiplier Tests
 
 ```{r}
