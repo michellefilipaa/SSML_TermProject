@@ -98,8 +98,6 @@ parks <- parks[order(parks$neighbourhood), ]
 
 ```{r}
 parks$neighbourhood <- tolower(parks$neighbourhood)
-
-# Remove punctuation and numbers from 'neighbourhood' column
 parks$neighbourhood <- gsub("[[:punct:]0-9]", "", parks$neighbourhood)
 ```
 
@@ -138,6 +136,66 @@ ggplot() +
   geom_sf(data = census2016_sf, aes(fill = proportion_park_area)) +
   scale_fill_gradient(name = "Proportion of Park Area", low = "grey", high = "darkgreen") +
   labs(title = "Proportion of Park Area per Neighborhood")
+```
+
+## Add Libraries
+
+```{r}
+libraries_geojson_file <- file.path(project_directory, "data", "geodata", "libraries.geojson")
+libraries<- st_read(libraries_geojson_file)
+names(libraries)[names(libraries) == "AREA_NAME"] <- "neighbourhood"
+libraries <- libraries[order(libraries$neighbourhood), ]
+```
+
+```{r}
+# data cleaning
+libraries$neighbourhood <- tolower(libraries$neighbourhood)
+libraries$neighbourhood <- gsub("[[:punct:]0-9]", "", libraries$neighbourhood)
+libraries$neighbourhood <- trimws(libraries$neighbourhood)
+
+libraries$neighbourhood[which(libraries$neighbourhood == 'cabbagetownsouth stjames town')] <- 'cabbagetownsouth st james town'
+libraries$neighbourhood[which(libraries$neighbourhood == 'north stjames town')] <- 'north st james town'
+```
+
+```{r}
+toronto_map <- ggplot() +
+  geom_sf(data = toronto, fill = "lightblue") +
+  theme_void()
+
+# Overlay libraries
+libraries_plot <- toronto_map +
+  geom_sf(data = libraries, color = "red", size = 1) +
+  theme_void()
+
+# Print the map
+print(libraries_plot)
+```
+
+```{r}
+# group by neighbourhood to sum up number of libraries in each
+libraries <- libraries %>%
+  group_by(neighbourhood) %>%
+  summarise(num_libraries = n())
+```
+
+```{r}
+# some neighbourhoods have no libraries, but we still need them in the data
+missing_neighborhoods <- setdiff(toronto$neighbourhood, libraries$neighbourhood)
+length(missing_neighborhoods)
+
+toronto_missing <- toronto[toronto$neighbourhood %in% missing_neighborhoods, ]
+toronto_missing <- subset(toronto, neighbourhood %in% missing_neighborhoods, select = c("neighbourhood", "geometry"))
+toronto_missing$num_libraries <- 0
+```
+
+```{r}
+# add the missing neighbourhoods
+libraries <- rbind(libraries, toronto_missing)
+```
+
+```{r}
+census2016_sf <- census2016_sf %>%
+  mutate(num_libraries = libraries$num_libraries)
 ```
 
 # Exploratory Spatial Data Analysis
