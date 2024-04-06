@@ -8,7 +8,7 @@
 To run the code R is required.
 
 ### Executing program
-First, run the data_enrichment.Rmd - This file will add the necessary columns to the main data.
+First, run the data_enrichment.Rmd - This file will add the necessary columns to the main data. <br>
 Then, run gwr_clean.Rmd - this file contains the actual spatial processes and plots used for analysis.
 
 ## Authors
