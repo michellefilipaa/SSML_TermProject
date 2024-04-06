@@ -22,6 +22,7 @@ project_directory <- dirname(getwd())
 ## Toronto Map
 
 ```{r}
+# load in the geojson of Toronto
 toronto_geojson_file <- file.path(project_directory, "data", "geodata", "neighbourhoods.geojson")
 toronto <- st_read(toronto_geojson_file)
 ```
@@ -66,7 +67,7 @@ The census files contain 63 variables that will be used as indicators.
 #census <- read.csv(census2011_path, row.names = 1)
 
 # 2016
-census_path <- file.path(project_directory, "data", "census.csv")
+census_path <- file.path(project_directory, "data", "census2016.csv")
 census <- read.csv(census_path, row.names = 1)
 census <- census[order(census$neighbourhood), ]
 
@@ -82,16 +83,18 @@ names(census)
 ## Add Population Density
 
 ```{r}
+# compute the area of each neighbourhood
 toronto$area <- st_area(toronto)
 ```
 
 ```{r}
-#census2011$population_density <- census2011$total_population/toronto$area
+# calculate the popualtion density
 census$population_density <- census$total_population/toronto$area
-#census2021$population_density <- census2021$total_population/toronto$area
 ```
 
 ## Add Toronto Geometries to Census 2016
+
+Currently, the census file only has the name of the neighbourhoods but no geometries. We need to add the geometries from toronto.geojson to the census file to perform the analysis.
 
 ```{r}
 census_with_geom <- merge(census, toronto, by.x = "neighbourhood", by.y = "neighbourhood", all.x = TRUE)
@@ -102,6 +105,7 @@ st_crs(census_sf) <- st_crs(toronto)
 ## Add Parks
 
 ```{r}
+# load in the geojson of parks in Toronto
 parks_geojson_file <- file.path(project_directory, "data", "geodata", "parks.geojson")
 parks <- st_read(parks_geojson_file)
 names(parks)[names(parks) == "AREA_NAME"] <- "neighbourhood"
@@ -109,11 +113,13 @@ parks <- parks[order(parks$neighbourhood), ]
 ```
 
 ```{r}
+# cleaning the neighbourhood names
 parks$neighbourhood <- tolower(parks$neighbourhood)
 parks$neighbourhood <- gsub("[[:punct:]0-9]", "", parks$neighbourhood)
 ```
 
 ```{r}
+# Group the parks by neighbourhood
 parks <- parks %>%
   group_by(neighbourhood)
 
@@ -136,6 +142,7 @@ parks <- parks %>%
 ```
 
 ```{r}
+# Order by neighbourhoods and add to the census file
 parks <- parks[order(parks$neighbourhood), ]
 census_sf <- census_sf %>%
   mutate(proportion_park_area = parks$proportion)
@@ -146,6 +153,7 @@ census_sf$proportion_park_area <- as.numeric(census_sf$proportion_park_area)
 ## Add Libraries
 
 ```{r}
+# load in the geojson of libraries in Toronto
 libraries_geojson_file <- file.path(project_directory, "data", "geodata", "libraries.geojson")
 libraries<- st_read(libraries_geojson_file)
 names(libraries)[names(libraries) == "AREA_NAME"] <- "neighbourhood"
@@ -185,6 +193,7 @@ libraries <- rbind(libraries, toronto_missing)
 ```
 
 ```{r}
+# order by neighbourhood and add to census
 libraries <- libraries[order(libraries$neighbourhood), ]
 census_sf <- census_sf %>%
   mutate(num_libraries = libraries$num_libraries)
@@ -193,6 +202,7 @@ census_sf <- census_sf %>%
 ## Add Police Facilities
 
 ```{r}
+# load in the geojson of police facilities in Toronto
 police_geojson_file <- file.path(project_directory, "data", "geodata", "distance_to_police.geojson")
 police <- st_read(police_geojson_file)
 names(police)[names(police) == "AREA_NAME"] <- "neighbourhood"
@@ -200,12 +210,14 @@ police <- police[order(police$neighbourhood), ]
 ```
 
 ```{r}
+# clean text
 police$neighbourhood <- tolower(police$neighbourhood)
 police$neighbourhood <- gsub("[[:punct:]0-9]", "", police$neighbourhood)
 police$neighbourhood <- trimws(police$neighbourhood)
 ```
 
 ```{r}
+# order by neighbourhood and add to census
 police <- police[order(police$neighbourhood), ]
 census_sf <- census_sf %>%
   mutate(closest_police_facility = police$HubDist)
@@ -226,12 +238,14 @@ print(police_plot)
 ## Add Subway Stops
 
 ```{r}
+# load in the geojson of subway stops in Toronto
 subway_geojson_file <- file.path(project_directory, "data", "geodata", "subway_stops.geojson")
 subway <- st_read(subway_geojson_file)
 names(subway)[names(subway) == "AREA_NAME"] <- "neighbourhood"
 ```
 
 ```{r}
+# clean text
 subway$neighbourhood <- tolower(subway$neighbourhood)
 subway$neighbourhood <- gsub("[[:punct:]0-9]", "", subway$neighbourhood)
 subway$neighbourhood <- trimws(subway$neighbourhood)
@@ -265,6 +279,7 @@ subway <- subway[order(subway$neighbourhood), ]
 ```
 
 ```{r}
+# add to census
 census_sf <- census_sf %>%
   mutate(num_subway_stops = subway$num_subway_stops)
 ```
@@ -272,18 +287,20 @@ census_sf <- census_sf %>%
 ## Add Red Light Cameras
 
 ```{r}
+# load in the geojson of Red light cameras in Toronto
 cam_geojson_file <- file.path(project_directory, "data", "geodata", "cam2016.csv")
 cameras <- read.csv(cam_geojson_file)
 cameras <- cameras[order(cameras$neighbourhood), ]
 ```
 
 ```{r}
+# clean neighbourhood text
 cameras$neighbourhood[which(cameras$neighbourhood == 'cabbagetownsouth stjames town')] <- 'cabbagetownsouth st james town'
 cameras$neighbourhood[which(cameras$neighbourhood == 'north stjames town')] <- 'north st james town'
 ```
 
 ```{r}
-# add geometries
+# add geometries to cameras data
 subset_toronto <- toronto %>%
   filter(neighbourhood %in% cameras$neighbourhood)
 
@@ -301,11 +318,13 @@ toronto_missing3$num_cameras <- 0
 ```
 
 ```{r}
+# add the neighbourhoods with no cameras to the data
 cameras <- cameras[order(cameras$neighbourhood), ]
 cameras <- rbind(cameras, toronto_missing3)
 ```
 
 ```{r}
+# add the camera data to census
 census_sf <- census_sf %>%
   mutate(num_cameras = cameras$num_cameras)
 ```
