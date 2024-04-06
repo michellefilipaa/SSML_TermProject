@@ -38,6 +38,8 @@ names(toronto)[names(toronto) == "AREA_NAME"] <- "neighbourhood"
 
 toronto$neighbourhood[which(toronto$neighbourhood == 'cabbagetownsouth stjames town')] <- 'cabbagetownsouth st james town'
 toronto$neighbourhood[which(toronto$neighbourhood == 'north stjames town')] <- 'north st james town'
+
+toronto <- toronto[order(toronto$neighbourhood), ]
 ```
 
 ------------------------------------------------------------------------
@@ -56,7 +58,7 @@ The census files contain 63 variables that will be used as indicators.
 
 census2016_path <- file.path(project_directory, "data", "census2016.csv")
 census2016 <- read.csv(census2016_path, row.names = 1)
-
+census2016 <- census2016[order(census2016$neighbourhood), ]
 #census2021_path <- file.path(project_directory, "data", "census2021.csv")
 #census2021 <- read.csv(census2021_path, row.names = 1)
 ```
@@ -85,13 +87,66 @@ census2016_sf <- st_as_sf(census2016_with_geom)
 st_crs(census2016_sf) <- st_crs(toronto)
 ```
 
+## Add Parks
+
+```{r}
+parks_geojson_file <- file.path(project_directory, "data", "geodata", "parks.geojson")
+parks <- st_read(parks_geojson_file)
+names(parks)[names(parks) == "AREA_NAME"] <- "neighbourhood"
+parks <- parks[order(parks$neighbourhood), ]
+```
+
+```{r}
+parks$neighbourhood <- tolower(parks$neighbourhood)
+
+# Remove punctuation and numbers from 'neighbourhood' column
+parks$neighbourhood <- gsub("[[:punct:]0-9]", "", parks$neighbourhood)
+```
+
+```{r}
+parks <- parks %>%
+  group_by(neighbourhood)
+
+# Calculate the area of each park
+parks <- parks %>%
+  mutate(park_area = st_area(geometry))
+
+# Sum the area per neighbourhood
+parks <- parks %>%
+  group_by(neighbourhood) %>%
+  summarise(total_park_area = sum(park_area))
+
+# Add the neighbourhood area
+parks <- parks %>%
+  mutate(neighbourhood_area = toronto$area)
+
+# Calculate how much of the neighbourhood is a park
+parks <- parks %>%
+  mutate(proportion = total_park_area/neighbourhood_area)
+```
+
+```{r}
+census2016_sf <- census2016_sf %>%
+  mutate(proportion_park_area = parks$proportion)
+
+census2016_sf$proportion_park_area <- as.numeric(census2016_sf$proportion_park_area)
+```
+
+```{r}
+# Plot the proportion of park area per neighborhood
+ggplot() +
+  geom_sf(data = census2016_sf, aes(fill = proportion_park_area)) +
+  scale_fill_gradient(name = "Proportion of Park Area", low = "grey", high = "darkgreen") +
+  labs(title = "Proportion of Park Area per Neighborhood")
+```
+
 # Exploratory Spatial Data Analysis
 
 ```{r}
 # change fill to see different maps
 ggplot() +
   geom_sf(data = census2016_sf, aes(fill = num_crimes)) +
-  scale_fill_viridis_c() +
+  scale_fill_gradient(name = "Number of crimes", low = "grey", high = "red") +
   theme_minimal()
 ```
 
@@ -216,13 +271,16 @@ visualize_LISA_clusters <- function(data_sf, LISA_data, significanceLevel = 0.05
 
 ```{r}
 # calculation
-gwr_analysis <- function(equation, data) {
+gwr_analysis <- function(equation, data, i) {
     crimedata2016_sp <- as_Spatial(data)
+    print(paste("---Equation", i, "---"))
     abw <- bw.gwr(equation, approach = "AIC", adaptive = TRUE, kernel = "gaussian", data = crimedata2016_sp)
+    
     a.gwr <- gwr.basic(equation, adaptive = TRUE, kernel = "gaussian", bw = abw, data = crimedata2016_sp)
     
     # Save results
     gwr_results <- list(a.gwr = a.gwr)
+    
     return(gwr_results)
 }
 ```
@@ -256,11 +314,13 @@ equation2 <- num_crimes ~ unemployed + household_income + no_certificate_diploma
 equation3 <- num_crimes ~ unemployed + household_income + no_certificate_diploma_degree + commute_public_transport + population_density 
 equation4 <- num_crimes ~ unemployed + household_income + no_certificate_diploma_degree + commute_public_transport + population_density + single_parents 
 equation5 <- num_crimes ~ no_certificate_diploma_degree + commute_public_transport + population_density + single_parents + income_under_5000 + income_above_100k + commute_walk + non_immigrants
+
+equation6 <- num_crimes ~ unemployed + proportion_park_area + commute_public_transport + population_density
 # List of equations
-equations <- list(equation1, equation2, equation3, equation4, equation5)
+equations <- list(equation1, equation2, equation3, equation4, equation5, equation6)
 ```
 
-## Calulations
+## Calculations
 
 ```{r}
 linear_results_list <- list()
@@ -278,7 +338,7 @@ for (i in seq_along(equations)) {
     lisa_results_list[[i]] <- lisa_analysis(census2016_sf)
     
     # GWR Analysis
-    gwr_results_list[[i]] <- gwr_analysis(eq, census2016_sf)
+    gwr_results_list[[i]] <- gwr_analysis(eq, census2016_sf, i)
 }
 ```
 
@@ -310,16 +370,27 @@ linear_results_list[[5]]
 ```
 
 ```{r}
+# equation 6
+linear_results_list[[6]]
+```
+
+```{r}
 census2016_sf$residuals1 <- residuals(linear_results_list[[1]]$model)
 census2016_sf$residuals2 <- residuals(linear_results_list[[2]]$model)
 census2016_sf$residuals3 <- residuals(linear_results_list[[3]]$model)
 census2016_sf$residuals4 <- residuals(linear_results_list[[4]]$model)
 census2016_sf$residuals5 <- residuals(linear_results_list[[5]]$model)
+
 qtm(census2016_sf, "residuals1")
 qtm(census2016_sf, "residuals2")
 qtm(census2016_sf, "residuals3")
 qtm(census2016_sf, "residuals4")
 qtm(census2016_sf, "residuals5")
+```
+
+```{r}
+census2016_sf$residuals6 <- residuals(linear_results_list[[6]]$model)
+qtm(census2016_sf, "residuals6")
 ```
 
 ## LISA Plots
@@ -330,6 +401,7 @@ visualise_LISA(census2016_sf, lisa_results_list[[2]]$gm_crime_LISA)
 visualise_LISA(census2016_sf, lisa_results_list[[3]]$gm_crime_LISA)
 visualise_LISA(census2016_sf, lisa_results_list[[4]]$gm_crime_LISA)
 visualise_LISA(census2016_sf, lisa_results_list[[5]]$gm_crime_LISA)
+visualise_LISA(census2016_sf, lisa_results_list[[6]]$gm_crime_LISA)
 ```
 
 ```{r}
@@ -338,6 +410,7 @@ visualize_LISA_clusters(census2016_sf, lisa_results_list[[2]]$gm_crime_LISA, sig
 visualize_LISA_clusters(census2016_sf, lisa_results_list[[3]]$gm_crime_LISA, significanceLevel = 0.05, colors = c('red', 'brown', 'NA', 'blue', 'cyan'))
 visualize_LISA_clusters(census2016_sf, lisa_results_list[[4]]$gm_crime_LISA, significanceLevel = 0.05, colors = c('red', 'brown', 'NA', 'blue', 'cyan'))
 visualize_LISA_clusters(census2016_sf, lisa_results_list[[5]]$gm_crime_LISA, significanceLevel = 0.05, colors = c('red', 'brown', 'NA', 'blue', 'cyan'))
+visualize_LISA_clusters(census2016_sf, lisa_results_list[[6]]$gm_crime_LISA, significanceLevel = 0.05, colors = c('red', 'brown', 'NA', 'blue', 'cyan'))
 ```
 
 ## GWR Plots
