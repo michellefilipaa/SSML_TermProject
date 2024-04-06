@@ -61,19 +61,22 @@ toronto_map
 The census files contain 63 variables that will be used as indicators.
 
 ```{r}
-#census2011_path <- file.path(project_directory, "data", "census2011.csv")
-#census2011 <- read.csv(census2011_path, row.names = 1)
+# 2011
+#census_path <- file.path(project_directory, "data", "census2011.csv")
+#census <- read.csv(census2011_path, row.names = 1)
 
-census2016_path <- file.path(project_directory, "data", "census2016.csv")
-census2016 <- read.csv(census2016_path, row.names = 1)
-census2016 <- census2016[order(census2016$neighbourhood), ]
+# 2016
+census_path <- file.path(project_directory, "data", "census.csv")
+census <- read.csv(census_path, row.names = 1)
+census <- census[order(census$neighbourhood), ]
 
-#census2021_path <- file.path(project_directory, "data", "census2021.csv")
-#census2021 <- read.csv(census2021_path, row.names = 1)
+# 2021
+#census_path <- file.path(project_directory, "data", "census2021.csv")
+#census <- read.csv(census2021_path, row.names = 1)
 ```
 
 ```{r}
-names(census2016)
+names(census)
 ```
 
 ## Add Population Density
@@ -84,16 +87,16 @@ toronto$area <- st_area(toronto)
 
 ```{r}
 #census2011$population_density <- census2011$total_population/toronto$area
-census2016$population_density <- census2016$total_population/toronto$area
+census$population_density <- census$total_population/toronto$area
 #census2021$population_density <- census2021$total_population/toronto$area
 ```
 
 ## Add Toronto Geometries to Census 2016
 
 ```{r}
-census2016_with_geom <- merge(census2016, toronto, by.x = "neighbourhood", by.y = "neighbourhood", all.x = TRUE)
-census2016_sf <- st_as_sf(census2016_with_geom)
-st_crs(census2016_sf) <- st_crs(toronto)
+census_with_geom <- merge(census, toronto, by.x = "neighbourhood", by.y = "neighbourhood", all.x = TRUE)
+census_sf <- st_as_sf(census_with_geom)
+st_crs(census_sf) <- st_crs(toronto)
 ```
 
 ## Add Parks
@@ -134,10 +137,10 @@ parks <- parks %>%
 
 ```{r}
 parks <- parks[order(parks$neighbourhood), ]
-census2016_sf <- census2016_sf %>%
+census_sf <- census_sf %>%
   mutate(proportion_park_area = parks$proportion)
 
-census2016_sf$proportion_park_area <- as.numeric(census2016_sf$proportion_park_area)
+census_sf$proportion_park_area <- as.numeric(census_sf$proportion_park_area)
 ```
 
 ## Add Libraries
@@ -183,7 +186,7 @@ libraries <- rbind(libraries, toronto_missing)
 
 ```{r}
 libraries <- libraries[order(libraries$neighbourhood), ]
-census2016_sf <- census2016_sf %>%
+census_sf <- census_sf %>%
   mutate(num_libraries = libraries$num_libraries)
 ```
 
@@ -204,7 +207,7 @@ police$neighbourhood <- trimws(police$neighbourhood)
 
 ```{r}
 police <- police[order(police$neighbourhood), ]
-census2016_sf <- census2016_sf %>%
+census_sf <- census_sf %>%
   mutate(closest_police_facility = police$HubDist)
 ```
 
@@ -262,7 +265,7 @@ subway <- subway[order(subway$neighbourhood), ]
 ```
 
 ```{r}
-census2016_sf <- census2016_sf %>%
+census_sf <- census_sf %>%
   mutate(num_subway_stops = subway$num_subway_stops)
 ```
 
@@ -303,7 +306,7 @@ cameras <- rbind(cameras, toronto_missing3)
 ```
 
 ```{r}
-census2016_sf <- census2016_sf %>%
+census_sf <- census_sf %>%
   mutate(num_cameras = cameras$num_cameras)
 ```
 
@@ -312,7 +315,7 @@ census2016_sf <- census2016_sf %>%
 ```{r}
 # change fill to see different maps
 ggplot() +
-  geom_sf(data = census2016_sf, aes(fill = num_crimes)) +
+  geom_sf(data = census_sf, aes(fill = num_crimes)) +
   scale_fill_gradient(name = "Number of crimes", low = "grey", high = "red") +
   theme_minimal()
 ```
@@ -321,10 +324,10 @@ ggplot() +
 
 ```{r}
 #Continuity
-crimedata_nbq <- poly2nb(census2016_sf, queen=TRUE) 
+crimedata_nbq <- poly2nb(census_sf, queen=TRUE) 
 crimedata_nbq_w <- nb2listw(crimedata_nbq, style="W", zero.policy = TRUE) #Queen’s 
 
-coordsW <- census2016_sf%>%
+coordsW <- census_sf%>%
   st_centroid()%>%
   st_geometry()
 
@@ -335,7 +338,7 @@ coordsW <- census2016_sf%>%
 
 plot(crimedata_nbq, st_geometry(coordsW), col="red")
 
-mc_global <- moran.mc(census2016_sf$num_crimes, crimedata_nbq_w, 2999, alternative="greater") 
+mc_global <- moran.mc(census_sf$num_crimes, crimedata_nbq_w, 2999, alternative="greater") 
 
 #plot the  Moran’s I
 plot(mc_global)
@@ -509,13 +512,13 @@ for (i in seq_along(equations)) {
     eq <- equations[[i]]
     
     # Linear Regression Analysis
-    linear_results_list[[i]] <- linear_regression_analysis(eq, census2016_sf)
+    linear_results_list[[i]] <- linear_regression_analysis(eq, census_sf)
     
     # LISA Analysis
-    lisa_results_list[[i]] <- lisa_analysis(census2016_sf)
+    lisa_results_list[[i]] <- lisa_analysis(census_sf)
     
     # GWR Analysis
-    gwr_results_list[[i]] <- gwr_analysis(eq, census2016_sf, i)
+    gwr_results_list[[i]] <- gwr_analysis(eq, census_sf, i)
 }
 ```
 
@@ -572,65 +575,65 @@ linear_results_list[[10]]
 ```
 
 ```{r}
-census2016_sf$residuals1 <- residuals(linear_results_list[[1]]$model)
-census2016_sf$residuals2 <- residuals(linear_results_list[[2]]$model)
-census2016_sf$residuals3 <- residuals(linear_results_list[[3]]$model)
-census2016_sf$residuals4 <- residuals(linear_results_list[[4]]$model)
-census2016_sf$residuals5 <- residuals(linear_results_list[[5]]$model)
+census_sf$residuals1 <- residuals(linear_results_list[[1]]$model)
+census_sf$residuals2 <- residuals(linear_results_list[[2]]$model)
+census_sf$residuals3 <- residuals(linear_results_list[[3]]$model)
+census_sf$residuals4 <- residuals(linear_results_list[[4]]$model)
+census_sf$residuals5 <- residuals(linear_results_list[[5]]$model)
 
-qtm(census2016_sf, "residuals1")
-qtm(census2016_sf, "residuals2")
-qtm(census2016_sf, "residuals3")
-qtm(census2016_sf, "residuals4")
-qtm(census2016_sf, "residuals5")
+qtm(census_sf, "residuals1")
+qtm(census_sf, "residuals2")
+qtm(census_sf, "residuals3")
+qtm(census_sf, "residuals4")
+qtm(census_sf, "residuals5")
 ```
 
 ```{r}
-census2016_sf$residuals6 <- residuals(linear_results_list[[6]]$model)
-census2016_sf$residuals7 <- residuals(linear_results_list[[7]]$model)
-census2016_sf$residuals8 <- residuals(linear_results_list[[8]]$model)
-census2016_sf$residuals9 <- residuals(linear_results_list[[9]]$model)
-census2016_sf$residuals10 <- residuals(linear_results_list[[10]]$model)
+census_sf$residuals6 <- residuals(linear_results_list[[6]]$model)
+census_sf$residuals7 <- residuals(linear_results_list[[7]]$model)
+census_sf$residuals8 <- residuals(linear_results_list[[8]]$model)
+census_sf$residuals9 <- residuals(linear_results_list[[9]]$model)
+census_sf$residuals10 <- residuals(linear_results_list[[10]]$model)
 
-qtm(census2016_sf, "residuals6")
-qtm(census2016_sf, "residuals7")
-qtm(census2016_sf, "residuals8")
-qtm(census2016_sf, "residuals9")
-qtm(census2016_sf, "residuals10")
+qtm(census_sf, "residuals6")
+qtm(census_sf, "residuals7")
+qtm(census_sf, "residuals8")
+qtm(census_sf, "residuals9")
+qtm(census_sf, "residuals10")
 ```
 
 ## LISA Plots
 
 ```{r}
-visualise_LISA(census2016_sf, lisa_results_list[[1]]$gm_crime_LISA)
-visualise_LISA(census2016_sf, lisa_results_list[[2]]$gm_crime_LISA)
-visualise_LISA(census2016_sf, lisa_results_list[[3]]$gm_crime_LISA)
-visualise_LISA(census2016_sf, lisa_results_list[[4]]$gm_crime_LISA)
-visualise_LISA(census2016_sf, lisa_results_list[[5]]$gm_crime_LISA)
+visualise_LISA(census_sf, lisa_results_list[[1]]$gm_crime_LISA)
+visualise_LISA(census_sf, lisa_results_list[[2]]$gm_crime_LISA)
+visualise_LISA(census_sf, lisa_results_list[[3]]$gm_crime_LISA)
+visualise_LISA(census_sf, lisa_results_list[[4]]$gm_crime_LISA)
+visualise_LISA(census_sf, lisa_results_list[[5]]$gm_crime_LISA)
 ```
 
 ```{r}
-visualise_LISA(census2016_sf, lisa_results_list[[6]]$gm_crime_LISA)
-visualise_LISA(census2016_sf, lisa_results_list[[7]]$gm_crime_LISA)
-visualise_LISA(census2016_sf, lisa_results_list[[8]]$gm_crime_LISA)
-visualise_LISA(census2016_sf, lisa_results_list[[9]]$gm_crime_LISA)
-visualise_LISA(census2016_sf, lisa_results_list[[10]]$gm_crime_LISA)
+visualise_LISA(census_sf, lisa_results_list[[6]]$gm_crime_LISA)
+visualise_LISA(census_sf, lisa_results_list[[7]]$gm_crime_LISA)
+visualise_LISA(census_sf, lisa_results_list[[8]]$gm_crime_LISA)
+visualise_LISA(census_sf, lisa_results_list[[9]]$gm_crime_LISA)
+visualise_LISA(census_sf, lisa_results_list[[10]]$gm_crime_LISA)
 ```
 
 ```{r}
-visualize_LISA_clusters(census2016_sf, lisa_results_list[[1]]$gm_crime_LISA, significanceLevel = 0.05, colors = c('red', 'brown', 'NA', 'blue', 'cyan'))
-visualize_LISA_clusters(census2016_sf, lisa_results_list[[2]]$gm_crime_LISA, significanceLevel = 0.05, colors = c('red', 'brown', 'NA', 'blue', 'cyan'))
-visualize_LISA_clusters(census2016_sf, lisa_results_list[[3]]$gm_crime_LISA, significanceLevel = 0.05, colors = c('red', 'brown', 'NA', 'blue', 'cyan'))
-visualize_LISA_clusters(census2016_sf, lisa_results_list[[4]]$gm_crime_LISA, significanceLevel = 0.05, colors = c('red', 'brown', 'NA', 'blue', 'cyan'))
-visualize_LISA_clusters(census2016_sf, lisa_results_list[[5]]$gm_crime_LISA, significanceLevel = 0.05, colors = c('red', 'brown', 'NA', 'blue', 'cyan'))
+visualize_LISA_clusters(census_sf, lisa_results_list[[1]]$gm_crime_LISA, significanceLevel = 0.05, colors = c('red', 'brown', 'NA', 'blue', 'cyan'))
+visualize_LISA_clusters(census_sf, lisa_results_list[[2]]$gm_crime_LISA, significanceLevel = 0.05, colors = c('red', 'brown', 'NA', 'blue', 'cyan'))
+visualize_LISA_clusters(census_sf, lisa_results_list[[3]]$gm_crime_LISA, significanceLevel = 0.05, colors = c('red', 'brown', 'NA', 'blue', 'cyan'))
+visualize_LISA_clusters(census_sf, lisa_results_list[[4]]$gm_crime_LISA, significanceLevel = 0.05, colors = c('red', 'brown', 'NA', 'blue', 'cyan'))
+visualize_LISA_clusters(census_sf, lisa_results_list[[5]]$gm_crime_LISA, significanceLevel = 0.05, colors = c('red', 'brown', 'NA', 'blue', 'cyan'))
 ```
 
 ```{r}
-visualize_LISA_clusters(census2016_sf, lisa_results_list[[6]]$gm_crime_LISA, significanceLevel = 0.05, colors = c('red', 'brown', 'NA', 'blue', 'cyan'))
-visualize_LISA_clusters(census2016_sf, lisa_results_list[[7]]$gm_crime_LISA, significanceLevel = 0.05, colors = c('red', 'brown', 'NA', 'blue', 'cyan'))
-visualize_LISA_clusters(census2016_sf, lisa_results_list[[8]]$gm_crime_LISA, significanceLevel = 0.05, colors = c('red', 'brown', 'NA', 'blue', 'cyan'))
-visualize_LISA_clusters(census2016_sf, lisa_results_list[[9]]$gm_crime_LISA, significanceLevel = 0.05, colors = c('red', 'brown', 'NA', 'blue', 'cyan'))
-visualize_LISA_clusters(census2016_sf, lisa_results_list[[10]]$gm_crime_LISA, significanceLevel = 0.05, colors = c('red', 'brown', 'NA', 'blue', 'cyan'))
+visualize_LISA_clusters(census_sf, lisa_results_list[[6]]$gm_crime_LISA, significanceLevel = 0.05, colors = c('red', 'brown', 'NA', 'blue', 'cyan'))
+visualize_LISA_clusters(census_sf, lisa_results_list[[7]]$gm_crime_LISA, significanceLevel = 0.05, colors = c('red', 'brown', 'NA', 'blue', 'cyan'))
+visualize_LISA_clusters(census_sf, lisa_results_list[[8]]$gm_crime_LISA, significanceLevel = 0.05, colors = c('red', 'brown', 'NA', 'blue', 'cyan'))
+visualize_LISA_clusters(census_sf, lisa_results_list[[9]]$gm_crime_LISA, significanceLevel = 0.05, colors = c('red', 'brown', 'NA', 'blue', 'cyan'))
+visualize_LISA_clusters(census_sf, lisa_results_list[[10]]$gm_crime_LISA, significanceLevel = 0.05, colors = c('red', 'brown', 'NA', 'blue', 'cyan'))
 ```
 
 ## GWR Plots
