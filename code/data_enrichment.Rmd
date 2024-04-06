@@ -133,6 +133,7 @@ parks <- parks %>%
 ```
 
 ```{r}
+parks <- parks[order(parks$neighbourhood), ]
 census2016_sf <- census2016_sf %>%
   mutate(proportion_park_area = parks$proportion)
 
@@ -181,6 +182,7 @@ libraries <- rbind(libraries, toronto_missing)
 ```
 
 ```{r}
+libraries <- libraries[order(libraries$neighbourhood), ]
 census2016_sf <- census2016_sf %>%
   mutate(num_libraries = libraries$num_libraries)
 ```
@@ -201,6 +203,7 @@ police$neighbourhood <- trimws(police$neighbourhood)
 ```
 
 ```{r}
+police <- police[order(police$neighbourhood), ]
 census2016_sf <- census2016_sf %>%
   mutate(closest_police_facility = police$HubDist)
 ```
@@ -215,4 +218,91 @@ police_plot <- toronto_map +
 
 # Print the map
 print(police_plot)
+```
+
+## Add Subway Stops
+
+```{r}
+subway_geojson_file <- file.path(project_directory, "data", "geodata", "subway_stops.geojson")
+subway <- st_read(subway_geojson_file)
+names(subway)[names(subway) == "AREA_NAME"] <- "neighbourhood"
+```
+
+```{r}
+subway$neighbourhood <- tolower(subway$neighbourhood)
+subway$neighbourhood <- gsub("[[:punct:]0-9]", "", subway$neighbourhood)
+subway$neighbourhood <- trimws(subway$neighbourhood)
+```
+
+```{r}
+subway$neighbourhood[which(subway$neighbourhood == 'cabbagetownsouth stjames town')] <- 'cabbagetownsouth st james town'
+subway$neighbourhood[which(subway$neighbourhood == 'north stjames town')] <- 'north st james town'
+```
+
+```{r}
+# group by neighbourhood to sum up number of stops in each
+subway <- subway %>%
+  group_by(neighbourhood) %>%
+  summarise(num_subway_stops = n())
+```
+
+```{r}
+# some neighbourhoods have no stops, but we still need them in the data
+missing_neighborhoods2 <- setdiff(toronto$neighbourhood, subway$neighbourhood)
+
+toronto_missing2 <- toronto[toronto$neighbourhood %in% missing_neighborhoods2, ]
+toronto_missing2 <- subset(toronto, neighbourhood %in% missing_neighborhoods2, select = c("neighbourhood", "geometry"))
+toronto_missing2$num_subway_stops <- 0
+```
+
+```{r}
+# add the missing neighbourhoods
+subway <- rbind(subway, toronto_missing2)
+subway <- subway[order(subway$neighbourhood), ]
+```
+
+```{r}
+census2016_sf <- census2016_sf %>%
+  mutate(num_subway_stops = subway$num_subway_stops)
+```
+
+## Add Red Light Cameras
+
+```{r}
+cam_geojson_file <- file.path(project_directory, "data", "geodata", "cam2016.csv")
+cameras <- read.csv(cam_geojson_file)
+cameras <- cameras[order(cameras$neighbourhood), ]
+```
+
+```{r}
+cameras$neighbourhood[which(cameras$neighbourhood == 'cabbagetownsouth stjames town')] <- 'cabbagetownsouth st james town'
+cameras$neighbourhood[which(cameras$neighbourhood == 'north stjames town')] <- 'north st james town'
+```
+
+```{r}
+# add geometries
+subset_toronto <- toronto %>%
+  filter(neighbourhood %in% cameras$neighbourhood)
+
+cameras <- cameras %>%
+  mutate(geometry = subset_toronto$geometry)
+```
+
+```{r}
+# some neighbourhoods have no stops, but we still need them in the data
+missing_neighborhoods3 <- setdiff(toronto$neighbourhood, cameras$neighbourhood)
+
+toronto_missing3 <- toronto[toronto$neighbourhood %in% missing_neighborhoods3, ]
+toronto_missing3 <- subset(toronto, neighbourhood %in% missing_neighborhoods3, select = c("neighbourhood"))
+toronto_missing3$num_cameras <- 0
+```
+
+```{r}
+cameras <- cameras[order(cameras$neighbourhood), ]
+cameras <- rbind(cameras, toronto_missing3)
+```
+
+```{r}
+census2016_sf <- census2016_sf %>%
+  mutate(num_cameras = cameras$num_cameras)
 ```

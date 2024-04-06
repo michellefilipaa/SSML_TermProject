@@ -186,15 +186,25 @@ visualise_gwr <- function(agwr_sf, equation) {
 ## Equations
 
 ```{r}
-equation1 <- num_crimes ~ unemployed + household_income + no_certificate_diploma_degree + commute_walk
-equation2 <- num_crimes ~ unemployed + household_income + no_certificate_diploma_degree + commute_public_transport
-equation3 <- num_crimes ~ unemployed + household_income + no_certificate_diploma_degree + commute_public_transport + population_density 
-equation4 <- num_crimes ~ unemployed + household_income + no_certificate_diploma_degree + commute_public_transport + population_density + single_parents 
-equation5 <- num_crimes ~ no_certificate_diploma_degree + commute_public_transport + population_density + single_parents + income_under_5000 + income_above_100k + commute_walk + non_immigrants
+# only social indicators
+eq1 <- num_crimes ~ unemployed + household_income + no_certificate_diploma_degree + commute_walk
+eq2 <- num_crimes ~ unemployed + household_income + no_certificate_diploma_degree + commute_public_transport
+eq3 <- num_crimes ~ unemployed + household_income + no_certificate_diploma_degree + commute_public_transport + single_parents
 
-equation6 <- num_crimes ~ unemployed + proportion_park_area + commute_public_transport + population_density
+# only physical indicators - change these to include Asha's physical indicators
+eq4 <- num_crimes ~ num_cameras + proportion_park_area + closest_police_facility
+eq5 <- num_crimes ~ population_density + proportion_park_area + closest_police_facility + num_subway_stops
+eq6 <- num_crimes ~ proportion_park_area + closest_police_facility + num_cameras
+
+# both social and physical indicators
+eq7 <- num_crimes ~ unemployed +  + commute_public_transport + population_density + proportion_park_area
+eq8 <-  num_crimes ~ household_income + no_certificate_diploma_degree + num_cameras + population_density
+eq9 <- num_crimes ~ low_income_percent + population_density + num_subway_stops + no_certificate_diploma_degree
+eq10 <- num_crimes ~ proportion_park_area + unemployed + population_density + no_certificate_diploma_degree + household_income
+
+
 # List of equations
-equations <- list(equation1, equation2, equation3, equation4, equation5, equation6)
+equations <- list(eq1, eq2, eq3, eq4, eq5, eq6, eq7, eq8, eq9, eq10)
 ```
 
 ## Calculations
