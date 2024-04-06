@@ -442,11 +442,11 @@ visualize_LISA_clusters <- function(data_sf, LISA_data, significanceLevel = 0.05
 ```{r}
 # calculation
 gwr_analysis <- function(equation, data, i) {
-    crimedata2016_sp <- as_Spatial(data)
+    crimedata_sp <- as_Spatial(data)
     print(paste("---Equation", i, "---"))
-    abw <- bw.gwr(equation, approach = "AIC", adaptive = TRUE, kernel = "gaussian", data = crimedata2016_sp)
+    abw <- bw.gwr(equation, approach = "AIC", adaptive = TRUE, kernel = "gaussian", data = crimedata_sp)
     
-    a.gwr <- gwr.basic(equation, adaptive = TRUE, kernel = "gaussian", bw = abw, data = crimedata2016_sp)
+    a.gwr <- gwr.basic(equation, adaptive = TRUE, kernel = "gaussian", bw = abw, data = crimedata_sp)
     
     # Save results
     gwr_results <- list(a.gwr = a.gwr)
