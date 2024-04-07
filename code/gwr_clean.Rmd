@@ -329,6 +329,10 @@ census_sf <- census_sf %>%
   mutate(num_cameras = cameras$num_cameras)
 ```
 
+```{r}
+names(census_sf)
+```
+
 # Exploratory Spatial Data Analysis
 
 ```{r}
@@ -503,7 +507,7 @@ eq1 <- num_crimes ~ unemployed + household_income + no_certificate_diploma_degre
 eq2 <- num_crimes ~ unemployed + household_income + no_certificate_diploma_degree + commute_public_transport
 eq3 <- num_crimes ~ commute_public_transport + income_under_5000 + immigrants + pop_15_to_19 + no_certificate_diploma_degree
 
-# only physical indicators - change these to include Asha's physical indicators
+# only physical indicators
 eq4 <- num_crimes ~ num_cameras + proportion_park_area + closest_police_facility
 eq5 <- num_crimes ~ population_density + proportion_park_area + closest_police_facility + num_subway_stops
 eq6 <- num_crimes ~ proportion_park_area + closest_police_facility + num_cameras

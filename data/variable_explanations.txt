@@ -1,0 +1,71 @@
+neighbourhood - the neighbourhood being considered             
+single_detached_house - the number of single detached houses in that neighbourhood
+apart_5_plus - the number of people that live in apartment buildings that have 5 or more storeys              
+other_dwelling - the number of people that live in dwellings not specifically categorised              
+avg_household_size - the average household size in a neighbourhood            
+married - the number of people that are married (includes legal partnerships)                        
+not_married - the number of people that are not married (can be divorced)                 
+single_parents - the number of single parents                
+one_person_household - the number of people that live alone          
+two_plus_person_household - the number of people that live with other people     
+low_income_percent - the percentage of people that are considered low income            
+non_immigrants - the number of people who are not immigrants                
+immigrants - the number of immigrants                    
+owner - the number of people who own the home they live in                         
+renter - the number of poeple who are renting the home they live in                        
+own_room - the number of people who have their own bedroom at home                      
+sharing_room - the number of people that share a bedroom at home                 
+suitable_housing - the number of people who have suitbale housing             
+not_suitable_housing - the number of people who have non-suitbale housing                      
+unemployed - the number of unemployed people                   
+employed - the number of employed people                      
+commute_drives - the number of people that drive themselves to work                
+commute_passenger - the number of people that get driven to work            
+commute_public_transport - the number of people that take public transport to work      
+commute_walk - the number of people that walk to work                  
+commute_cycle - the number of people that cycle to work                
+commute_other - the number of people that get to work in a different manner that has not been mentioned               
+pop_0_to_4 - the number of people aged 0 to 4                    
+pop_5_to_9 - the number of people aged 5 to 9
+pop_10_to_14 - the number of people aged 10 to 14   
+pop_15_to_19 - the number of people aged 15 to 19
+pop_20_to_24 - the number of people aged 20 to 24
+pop_25_to_29 - the number of people aged 25 to 29
+pop_30_to_34 - the number of people aged 30 to 34
+pop_35_to_39 - the number of people aged 35 to 39
+pop_40_to_44 - the number of people aged 40 to 44 
+pop_45_to_49 - the number of people aged 45 to 49
+pop_50_to_54 - the number of people aged 50 to 54
+pop_55_to_59 - the number of people aged 55 to 59
+pop_60_to_64 - the number of people aged 60 to 64
+pop_65_to_69 - the number of people aged 65 to 69
+pop_70_to_74 - the number of people aged 70 to 74
+pop_75_to_79 - the number of people aged 75 to 79 
+pop_80_to_84 - the number of people aged 80 to 85
+pop_85_to_89 - the number of people aged 85 to 89
+pop_90_to_94 - the number of people aged 90 to 94
+pop_95_to_99 - the number of people aged 95 to 99
+pop_100_plus - the number of people aged above 100
+household_income - the average household income in a neighbourhood       
+income_under_5000 - the number of people with income under 5000           
+income_between_5000_9999 - the number of people with income between 5000 and 9999
+income_between_10000_14999 - the number of people with income between 10 000 and 14 999
+income_between_50000_59999 -  - the number of people with income between 50 000 and 59 999
+income_above_100k -  - the number of people with income above 100 000
+income_between_15000_19999 - the number of people with income between 15 000 and 19 999
+income_between_20000_29999 - the number of people with income between 20 000 and 29 999
+income_between_30000_39999 - the number of people with income between 30 000 and 39 999
+income_between_40000_49999 - the number of people with income between 40 000 and 49 999
+income_between_60000_79999 - the number of people with income between 60 000 and 79 999
+income_between_80000_99999 - the number of people with income between 80 000 and 99 999
+no_certificate_diploma_degree - the number of people with no certificate, diploma or degree (including high school)
+highschool_diploma - the number of people with a high school diploma        
+post_secondary_diploma - the number of people with some sort of qualification past high school
+total_population - the number of people in each neighbourhood            
+num_crimes - the number of crimes recorded  
+population_density - the population density                     
+proportion_park_area - the proportion of a neighbourhood that is covered by a park          
+num_libraries - the number of libraries in a neighbourhood
+closest_police_facility - the distance to the closest police facility from the center of a neighbourhood
+num_subway_stops - the number of subway stops in a neighbourhood
+num_cameras - the number of red light cameras in a neighbourhood
