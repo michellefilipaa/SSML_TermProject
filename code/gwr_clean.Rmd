@@ -64,7 +64,7 @@ The census files contain 63 variables that will be used as indicators.
 ```{r}
 # 2011
 #census_path <- file.path(project_directory, "data", "census2011.csv")
-#census <- read.csv(census2011_path, row.names = 1)
+#census <- read.csv(census_path, row.names = 1)
 
 # 2016
 census_path <- file.path(project_directory, "data", "census2016.csv")
@@ -73,7 +73,7 @@ census <- census[order(census$neighbourhood), ]
 
 # 2021
 #census_path <- file.path(project_directory, "data", "census2021.csv")
-#census <- read.csv(census2021_path, row.names = 1)
+#census <- read.csv(census_path, row.names = 1)
 ```
 
 ```{r}
@@ -501,7 +501,7 @@ visualise_gwr <- function(agwr_sf, equation) {
 # only social indicators
 eq1 <- num_crimes ~ unemployed + household_income + no_certificate_diploma_degree + commute_walk
 eq2 <- num_crimes ~ unemployed + household_income + no_certificate_diploma_degree + commute_public_transport
-eq3 <- num_crimes ~ unemployed + household_income + no_certificate_diploma_degree + commute_public_transport + single_parents
+eq3 <- num_crimes ~ commute_public_transport + income_under_5000 + immigrants + pop_15_to_19 + no_certificate_diploma_degree
 
 # only physical indicators - change these to include Asha's physical indicators
 eq4 <- num_crimes ~ num_cameras + proportion_park_area + closest_police_facility
@@ -687,5 +687,14 @@ for (i in seq_along(gwr_results_list)[6:10]) {
     
     # Print GWR plot
     print(gwr_plot)
+}
+```
+
+```{r}
+for (i in seq_along(gwr_results_list)[1:10]) {
+    print(paste("---Equation", i, "---"))
+    gwr_result <- gwr_results_list[[i]]
+
+    print(gwr_result)
 }
 ```
