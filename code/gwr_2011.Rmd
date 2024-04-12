@@ -1,0 +1,710 @@
+---
+title: "GWR"
+output: html_document
+date: "2024-04-05"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+easypackages::packages ("sf", "sp", "spdep", "spatialreg", "GWmodel", "tmap", "mapview", "car", "RColorBrewer", 
+                        "cowplot", "leafsync", "leaflet.extras2", "mapview", "tidyverse", "patchwork")
+```
+
+```{r}
+project_directory <- dirname(getwd())
+```
+
+# Loading Data
+
+## Toronto Map
+
+```{r}
+# load in the geojson of Toronto
+toronto_geojson_file <- file.path(project_directory, "data", "geodata", "neighbourhoods.geojson")
+toronto <- st_read(toronto_geojson_file)
+```
+
+```{r}
+# the AREA_NAME is the name of the neighbourhood
+# we need to clean the text so it is the same as all the other files
+toronto$AREA_NAME <- tolower(trimws(gsub("\\(\\d+\\)", "", toronto$AREA_NAME)))
+toronto$AREA_NAME <- gsub("\\(\\d+\\)", "", toronto$AREA_NAME)
+toronto$AREA_NAME <- gsub("[[:punct:]]", "", toronto$AREA_NAME)
+
+names(toronto)[names(toronto) == "AREA_NAME"] <- "neighbourhood"
+
+
+toronto$neighbourhood[which(toronto$neighbourhood == 'cabbagetownsouth stjames town')] <- 'cabbagetownsouth st james town'
+toronto$neighbourhood[which(toronto$neighbourhood == 'north stjames town')] <- 'north st james town'
+
+toronto <- toronto[order(toronto$neighbourhood), ]
+```
+
+------------------------------------------------------------------------
+
+```{r}
+toronto$neighbourhood
+```
+
+```{r}
+toronto_map <- ggplot() +
+  geom_sf(data = toronto, fill = "lightblue") +
+  theme_void()
+
+toronto_map
+```
+
+## Census 2016
+
+The census files contain 63 variables that will be used as indicators.
+
+```{r}
+# 2011
+census2011_path <- file.path(project_directory, "data", "census2011.csv")
+census <- read.csv(census2011_path, row.names = 1)
+
+# 2016
+#census_path <- file.path(project_directory, "data", "census2016.csv")
+#census <- read.csv(census_path, row.names = 1)
+#census <- census[order(census$neighbourhood), ]
+
+# 2021
+#census_path <- file.path(project_directory, "data", "census2021.csv")
+#census <- read.csv(census2021_path, row.names = 1)
+```
+
+```{r}
+names(census)
+```
+
+## Add Population Density
+
+```{r}
+# compute the area of each neighbourhood
+toronto$area <- st_area(toronto)
+```
+
+```{r}
+# calculate the popualtion density
+census$population_density <- census$total_population/toronto$area
+```
+
+## Add Toronto Geometries to Census 2016
+
+Currently, the census file only has the name of the neighbourhoods but no geometries. We need to add the geometries from toronto.geojson to the census file to perform the analysis.
+
+```{r}
+census_with_geom <- merge(census, toronto, by.x = "neighbourhood", by.y = "neighbourhood", all.x = TRUE)
+census_sf <- st_as_sf(census_with_geom)
+st_crs(census_sf) <- st_crs(toronto)
+```
+
+## Add Parks
+
+```{r}
+# load in the geojson of parks in Toronto
+parks_geojson_file <- file.path(project_directory, "data", "geodata", "parks.geojson")
+parks <- st_read(parks_geojson_file)
+names(parks)[names(parks) == "AREA_NAME"] <- "neighbourhood"
+parks <- parks[order(parks$neighbourhood), ]
+```
+
+```{r}
+# cleaning the neighbourhood names
+parks$neighbourhood <- tolower(parks$neighbourhood)
+parks$neighbourhood <- gsub("[[:punct:]0-9]", "", parks$neighbourhood)
+```
+
+```{r}
+# Group the parks by neighbourhood
+parks <- parks %>%
+  group_by(neighbourhood)
+
+# Calculate the area of each park
+parks <- parks %>%
+  mutate(park_area = st_area(geometry))
+
+# Sum the area per neighbourhood
+parks <- parks %>%
+  group_by(neighbourhood) %>%
+  summarise(total_park_area = sum(park_area))
+
+# Add the neighbourhood area
+parks <- parks %>%
+  mutate(neighbourhood_area = toronto$area)
+
+# Calculate how much of the neighbourhood is a park
+parks <- parks %>%
+  mutate(proportion = total_park_area/neighbourhood_area)
+```
+
+```{r}
+# Order by neighbourhoods and add to the census file
+parks <- parks[order(parks$neighbourhood), ]
+census_sf <- census_sf %>%
+  mutate(proportion_park_area = parks$proportion)
+
+census_sf$proportion_park_area <- as.numeric(census_sf$proportion_park_area)
+```
+
+## Add Libraries
+
+```{r}
+# load in the geojson of libraries in Toronto
+libraries_geojson_file <- file.path(project_directory, "data", "geodata", "libraries.geojson")
+libraries<- st_read(libraries_geojson_file)
+names(libraries)[names(libraries) == "AREA_NAME"] <- "neighbourhood"
+libraries <- libraries[order(libraries$neighbourhood), ]
+```
+
+```{r}
+# data cleaning
+libraries$neighbourhood <- tolower(libraries$neighbourhood)
+libraries$neighbourhood <- gsub("[[:punct:]0-9]", "", libraries$neighbourhood)
+libraries$neighbourhood <- trimws(libraries$neighbourhood)
+
+libraries$neighbourhood[which(libraries$neighbourhood == 'cabbagetownsouth stjames town')] <- 'cabbagetownsouth st james town'
+libraries$neighbourhood[which(libraries$neighbourhood == 'north stjames town')] <- 'north st james town'
+```
+
+```{r}
+# group by neighbourhood to sum up number of libraries in each
+libraries <- libraries %>%
+  group_by(neighbourhood) %>%
+  summarise(num_libraries = n())
+```
+
+```{r}
+# some neighbourhoods have no libraries, but we still need them in the data
+missing_neighborhoods <- setdiff(toronto$neighbourhood, libraries$neighbourhood)
+length(missing_neighborhoods)
+
+toronto_missing <- toronto[toronto$neighbourhood %in% missing_neighborhoods, ]
+toronto_missing <- subset(toronto, neighbourhood %in% missing_neighborhoods, select = c("neighbourhood", "geometry"))
+toronto_missing$num_libraries <- 0
+```
+
+```{r}
+# add the missing neighbourhoods
+libraries <- rbind(libraries, toronto_missing)
+```
+
+```{r}
+# order by neighbourhood and add to census
+libraries <- libraries[order(libraries$neighbourhood), ]
+census_sf <- census_sf %>%
+  mutate(num_libraries = libraries$num_libraries)
+```
+
+## Add Police Facilities
+
+```{r}
+# load in the geojson of police facilities in Toronto
+police_geojson_file <- file.path(project_directory, "data", "geodata", "distance_to_police.geojson")
+police <- st_read(police_geojson_file)
+names(police)[names(police) == "AREA_NAME"] <- "neighbourhood"
+police <- police[order(police$neighbourhood), ]
+```
+
+```{r}
+# clean text
+police$neighbourhood <- tolower(police$neighbourhood)
+police$neighbourhood <- gsub("[[:punct:]0-9]", "", police$neighbourhood)
+police$neighbourhood <- trimws(police$neighbourhood)
+```
+
+```{r}
+# order by neighbourhood and add to census
+police <- police[order(police$neighbourhood), ]
+census_sf <- census_sf %>%
+  mutate(closest_police_facility = police$HubDist)
+```
+
+This shows the closest police facility for every neighbourhood (measured in km).
+
+```{r}
+# Overlay libraries
+police_plot <- toronto_map +
+  geom_sf(data = police, color = "yellow", size = 1) +
+  theme_void()
+
+# Print the map
+print(police_plot)
+```
+
+## Add Subway Stops
+
+```{r}
+# load in the geojson of subway stops in Toronto
+subway_geojson_file <- file.path(project_directory, "data", "geodata", "subway_stops.geojson")
+subway <- st_read(subway_geojson_file)
+names(subway)[names(subway) == "AREA_NAME"] <- "neighbourhood"
+```
+
+```{r}
+# clean text
+subway$neighbourhood <- tolower(subway$neighbourhood)
+subway$neighbourhood <- gsub("[[:punct:]0-9]", "", subway$neighbourhood)
+subway$neighbourhood <- trimws(subway$neighbourhood)
+```
+
+```{r}
+subway$neighbourhood[which(subway$neighbourhood == 'cabbagetownsouth stjames town')] <- 'cabbagetownsouth st james town'
+subway$neighbourhood[which(subway$neighbourhood == 'north stjames town')] <- 'north st james town'
+```
+
+```{r}
+# group by neighbourhood to sum up number of stops in each
+subway <- subway %>%
+  group_by(neighbourhood) %>%
+  summarise(num_subway_stops = n())
+```
+
+```{r}
+# some neighbourhoods have no stops, but we still need them in the data
+missing_neighborhoods2 <- setdiff(toronto$neighbourhood, subway$neighbourhood)
+
+toronto_missing2 <- toronto[toronto$neighbourhood %in% missing_neighborhoods2, ]
+toronto_missing2 <- subset(toronto, neighbourhood %in% missing_neighborhoods2, select = c("neighbourhood", "geometry"))
+toronto_missing2$num_subway_stops <- 0
+```
+
+```{r}
+# add the missing neighbourhoods
+subway <- rbind(subway, toronto_missing2)
+subway <- subway[order(subway$neighbourhood), ]
+```
+
+```{r}
+# add to census
+census_sf <- census_sf %>%
+  mutate(num_subway_stops = subway$num_subway_stops)
+```
+
+## Add Red Light Cameras
+
+```{r}
+# load in the geojson of Red light cameras in Toronto
+cam_geojson_file <- file.path(project_directory, "data", "geodata", "cam2016.csv")
+cameras <- read.csv(cam_geojson_file)
+cameras <- cameras[order(cameras$neighbourhood), ]
+```
+
+```{r}
+# clean neighbourhood text
+cameras$neighbourhood[which(cameras$neighbourhood == 'cabbagetownsouth stjames town')] <- 'cabbagetownsouth st james town'
+cameras$neighbourhood[which(cameras$neighbourhood == 'north stjames town')] <- 'north st james town'
+```
+
+```{r}
+# add geometries to cameras data
+subset_toronto <- toronto %>%
+  filter(neighbourhood %in% cameras$neighbourhood)
+
+cameras <- cameras %>%
+  mutate(geometry = subset_toronto$geometry)
+```
+
+```{r}
+# some neighbourhoods have no stops, but we still need them in the data
+missing_neighborhoods3 <- setdiff(toronto$neighbourhood, cameras$neighbourhood)
+
+toronto_missing3 <- toronto[toronto$neighbourhood %in% missing_neighborhoods3, ]
+toronto_missing3 <- subset(toronto, neighbourhood %in% missing_neighborhoods3, select = c("neighbourhood"))
+toronto_missing3$num_cameras <- 0
+```
+
+```{r}
+# add the neighbourhoods with no cameras to the data
+cameras <- cameras[order(cameras$neighbourhood), ]
+cameras <- rbind(cameras, toronto_missing3)
+```
+
+```{r}
+# add the camera data to census
+census_sf <- census_sf %>%
+  mutate(num_cameras = cameras$num_cameras)
+```
+
+# Exploratory Spatial Data Analysis
+
+```{r}
+# change fill to see different maps
+ggplot() +
+  geom_sf(data = census_sf, aes(fill = num_crimes)) +
+  scale_fill_gradient(name = "Number of crimes", low = "grey", high = "red") +
+  theme_minimal()
+```
+
+# Spatial Autocorrelation of Dependent Variable
+
+```{r}
+#Continuity
+crimedata_nbq <- poly2nb(census_sf, queen=TRUE) 
+crimedata_nbq_w <- nb2listw(crimedata_nbq, style="W", zero.policy = TRUE) #Queen’s 
+
+coordsW <- census_sf%>%
+  st_centroid()%>%
+  st_geometry()
+
+#KNN
+#crimedata_KNN <- knearneigh(coordsW, k=4) 
+#crimedata_nbq_KNN <- knn2nb(crimedata_KNN, sym=T)
+#crimedata_KNN_w <- nb2listw(crimedata_nbq_KNN, style="W", zero.policy = TRUE)
+
+plot(crimedata_nbq, st_geometry(coordsW), col="red")
+
+mc_global <- moran.mc(census_sf$num_crimes, crimedata_nbq_w, 2999, alternative="greater") 
+
+#plot the  Moran’s I
+plot(mc_global)
+
+mc_global
+```
+
+# Functions for analysis
+
+## Linear Regression
+
+```{r}
+#calculation
+linear_regression_analysis <- function(equation, data) {
+    linearMod <- lm(equation, data = data)
+    summary_info <- summary(linearMod)
+    mc_global_OLS <- moran.mc(linearMod$residuals, crimedata_nbq_w, 2999, zero.policy = TRUE, alternative = "greater")
+    vif_values <- vif(linearMod)
+    
+    # Save results
+    linear_results <- list(model = linearMod, summary = summary_info, vif = vif_values, moran=mc_global_OLS)
+    return(linear_results)
+}
+```
+
+```{r}
+plot_residuals <- function(linear_results){
+  qtm(residuals(linear_results$linearMod))
+}
+```
+
+## LISA
+
+```{r}
+# calculation
+lisa_analysis <- function(data) {
+    gm_crime_LISA <- localmoran(data$num_crimes, crimedata_nbq_w)
+    summary_info <- summary(gm_crime_LISA)
+    
+    # Save results
+    lisa_results <- list(gm_crime_LISA = gm_crime_LISA, summary = summary_info)
+    return(lisa_results)
+}
+```
+
+```{r}
+# visualisation
+visualise_LISA <- function(data, gm_crime_LISA) {
+    sf_object <- data 
+    
+    sf_object$gm_crime_LISA <- gm_crime_LISA[, 1]
+    p_values <- gm_crime_LISA[, 5]
+
+    map_LISA <- tm_shape(sf_object) + 
+        tm_polygons(col = "gm_crime_LISA", title = "Local Moran’s I", midpoint = 0,
+                    palette = "RdYlBu", breaks = c(-1, -0.5, 0, 0.5, 1, 2))
+    
+    map_LISA_p <- tm_shape(sf_object) + 
+        tm_polygons(col = "gm_crime_LISA", title = "p-values",
+                    breaks = c(0, 0.01, 0.05, 1), palette = "Reds")
+
+    tmap_arrange(map_LISA, map_LISA_p)
+}
+```
+
+```{r}
+# crime clusters 
+visualize_LISA_clusters <- function(data_sf, LISA_data, significanceLevel = 0.05, colors = c('red', 'brown', 'NA', 'blue', 'cyan')) {
+  # Calculate mean value of the variable under consideration
+  meanVal <- mean(data_sf$num_crimes)
+  
+  # Create a copy of LISA data to preserve original results
+  LISA_type <- LISA_data
+  
+  # Create a tibble object storing the LISA values into different classes of significance
+  LISA_mapping <- LISA_type %>%
+    tibble::as_tibble() %>%
+    magrittr::set_colnames(c("Ii", "E.Ii", "Var.Ii", "Z.Ii", "Pr(z > 0)")) %>%
+    dplyr::mutate(coType = dplyr::case_when(
+      `Pr(z > 0)` > significanceLevel ~ "Insignificant", # Greater than significance level, thus Insignificant
+      `Pr(z > 0)` <= significanceLevel & Ii >= 0 & data_sf$num_crimes >= meanVal ~ "HH", # High-High local Moran's I values
+      `Pr(z > 0)` <= significanceLevel & Ii >= 0 & data_sf$num_crimes < meanVal ~ "LL", # Low-Low local Moran's I values
+      `Pr(z > 0)` <= significanceLevel & Ii < 0 & data_sf$num_crimes >= meanVal ~ "HL", # High-Low local Moran's I values
+      `Pr(z > 0)` <= significanceLevel & Ii < 0 & data_sf$num_crimes < meanVal ~ "LH" # Low-High local Moran's I values
+    ))
+  
+  # Join back to the main polygon data
+  data_sf$coType <- LISA_mapping$coType %>% tidyr::replace_na("Insignificant")
+  
+  # Map the clusters
+  ggplot(data_sf) +
+    geom_sf(aes(fill = coType)) +
+    scale_fill_manual(values = colors, name = 'Clusters & \nOutliers') +
+    labs(title = "Crime clusters") +
+    theme(panel.background = element_rect(fill = 'transparent'))
+}
+```
+
+## GWR
+
+```{r}
+# calculation
+gwr_analysis <- function(equation, data, i) {
+    crimedata_sp <- as_Spatial(data)
+    print(paste("---Equation", i, "---"))
+    abw <- bw.gwr(equation, approach = "AIC", adaptive = TRUE, kernel = "gaussian", data = crimedata_sp)
+    
+    a.gwr <- gwr.basic(equation, adaptive = TRUE, kernel = "gaussian", bw = abw, data = crimedata_sp)
+    
+    # Save results
+    gwr_results <- list(a.gwr = a.gwr)
+    
+    return(gwr_results)
+}
+```
+
+```{r}
+# visualisation
+extract_predictors <- function(equation) {
+    predictors <- attr(terms(equation), "term.labels")
+    return(predictors)
+}
+
+visualise_gwr <- function(agwr_sf, equation) {
+    predictors <- extract_predictors(equation)
+    
+    maps <- lapply(predictors, function(predictor) {
+        qtm_map <- qtm(agwr_sf, predictor)
+        return(qtm_map)
+    })
+    
+    tmap_arrange(maps, asp = 5, ncol = 1)
+}
+```
+
+# Processing
+
+## Equations
+
+```{r}
+# only social indicators
+eq1 <- num_crimes ~ unemployed + household_income + no_certificate_diploma_degree + commute_walk
+eq2 <- num_crimes ~ unemployed + household_income + no_certificate_diploma_degree + commute_public_transport
+eq3 <- num_crimes ~ commute_public_transport + income_under_5000 + immigrants + pop_15_to_19 + no_certificate_diploma_degree
+
+# only physical indicators - change these to include Asha's physical indicators
+eq4 <- num_crimes ~ num_cameras + proportion_park_area + closest_police_facility
+eq5 <- num_crimes ~ population_density + proportion_park_area + closest_police_facility + num_subway_stops
+eq6 <- num_crimes ~ proportion_park_area + closest_police_facility + num_cameras
+
+# both social and physical indicators
+eq7 <- num_crimes ~ unemployed +  + commute_public_transport + population_density + proportion_park_area
+eq8 <-  num_crimes ~ household_income + no_certificate_diploma_degree + num_cameras + population_density
+eq9 <- num_crimes ~ low_income_percent + population_density + num_subway_stops + no_certificate_diploma_degree
+eq10 <- num_crimes ~ proportion_park_area + unemployed + population_density + no_certificate_diploma_degree + household_income
+
+
+# List of equations
+equations <- list(eq1, eq2, eq3, eq4, eq5, eq6, eq7, eq8, eq9, eq10)
+```
+
+## Calculations
+
+```{r}
+linear_results_list <- list()
+lisa_results_list <- list()
+gwr_results_list <- list()
+
+# Perform analysis for each equation
+for (i in seq_along(equations)) {
+    eq <- equations[[i]]
+    
+    # Linear Regression Analysis
+    linear_results_list[[i]] <- linear_regression_analysis(eq, census_sf)
+    
+    # LISA Analysis
+    lisa_results_list[[i]] <- lisa_analysis(census_sf)
+    
+    # GWR Analysis
+    gwr_results_list[[i]] <- gwr_analysis(eq, census_sf, i)
+}
+```
+
+## Linear Regression Plots
+
+```{r}
+# equation 1
+linear_results_list[[1]]
+```
+
+```{r}
+# equation 2
+linear_results_list[[2]]
+```
+
+```{r}
+# equation 3
+linear_results_list[[3]]
+```
+
+```{r}
+# equation 4
+linear_results_list[[4]]
+```
+
+```{r}
+# equation 5
+linear_results_list[[5]]
+```
+
+```{r}
+# equation 6
+linear_results_list[[6]]
+```
+
+```{r}
+# equation 7
+linear_results_list[[7]]
+```
+
+```{r}
+# equation 8
+linear_results_list[[8]]
+```
+
+```{r}
+# equation 9
+linear_results_list[[9]]
+```
+
+```{r}
+# equation 10
+linear_results_list[[10]]
+```
+
+```{r}
+census_sf$residuals1 <- residuals(linear_results_list[[1]]$model)
+census_sf$residuals2 <- residuals(linear_results_list[[2]]$model)
+census_sf$residuals3 <- residuals(linear_results_list[[3]]$model)
+census_sf$residuals4 <- residuals(linear_results_list[[4]]$model)
+census_sf$residuals5 <- residuals(linear_results_list[[5]]$model)
+
+qtm(census_sf, "residuals1")
+qtm(census_sf, "residuals2")
+qtm(census_sf, "residuals3")
+qtm(census_sf, "residuals4")
+qtm(census_sf, "residuals5")
+```
+
+```{r}
+census_sf$residuals6 <- residuals(linear_results_list[[6]]$model)
+census_sf$residuals7 <- residuals(linear_results_list[[7]]$model)
+census_sf$residuals8 <- residuals(linear_results_list[[8]]$model)
+census_sf$residuals9 <- residuals(linear_results_list[[9]]$model)
+census_sf$residuals10 <- residuals(linear_results_list[[10]]$model)
+
+qtm(census_sf, "residuals6")
+qtm(census_sf, "residuals7")
+qtm(census_sf, "residuals8")
+qtm(census_sf, "residuals9")
+qtm(census_sf, "residuals10")
+```
+
+## LISA Plots
+
+```{r}
+visualise_LISA(census_sf, lisa_results_list[[1]]$gm_crime_LISA)
+visualise_LISA(census_sf, lisa_results_list[[2]]$gm_crime_LISA)
+visualise_LISA(census_sf, lisa_results_list[[3]]$gm_crime_LISA)
+visualise_LISA(census_sf, lisa_results_list[[4]]$gm_crime_LISA)
+visualise_LISA(census_sf, lisa_results_list[[5]]$gm_crime_LISA)
+```
+
+```{r}
+visualise_LISA(census_sf, lisa_results_list[[6]]$gm_crime_LISA)
+visualise_LISA(census_sf, lisa_results_list[[7]]$gm_crime_LISA)
+visualise_LISA(census_sf, lisa_results_list[[8]]$gm_crime_LISA)
+visualise_LISA(census_sf, lisa_results_list[[9]]$gm_crime_LISA)
+visualise_LISA(census_sf, lisa_results_list[[10]]$gm_crime_LISA)
+```
+
+```{r}
+visualize_LISA_clusters(census_sf, lisa_results_list[[1]]$gm_crime_LISA, significanceLevel = 0.05, colors = c('red', 'brown', 'NA', 'blue', 'cyan'))
+visualize_LISA_clusters(census_sf, lisa_results_list[[2]]$gm_crime_LISA, significanceLevel = 0.05, colors = c('red', 'brown', 'NA', 'blue', 'cyan'))
+visualize_LISA_clusters(census_sf, lisa_results_list[[3]]$gm_crime_LISA, significanceLevel = 0.05, colors = c('red', 'brown', 'NA', 'blue', 'cyan'))
+visualize_LISA_clusters(census_sf, lisa_results_list[[4]]$gm_crime_LISA, significanceLevel = 0.05, colors = c('red', 'brown', 'NA', 'blue', 'cyan'))
+visualize_LISA_clusters(census_sf, lisa_results_list[[5]]$gm_crime_LISA, significanceLevel = 0.05, colors = c('red', 'brown', 'NA', 'blue', 'cyan'))
+```
+
+```{r}
+visualize_LISA_clusters(census_sf, lisa_results_list[[6]]$gm_crime_LISA, significanceLevel = 0.05, colors = c('red', 'brown', 'NA', 'blue', 'cyan'))
+visualize_LISA_clusters(census_sf, lisa_results_list[[7]]$gm_crime_LISA, significanceLevel = 0.05, colors = c('red', 'brown', 'NA', 'blue', 'cyan'))
+visualize_LISA_clusters(census_sf, lisa_results_list[[8]]$gm_crime_LISA, significanceLevel = 0.05, colors = c('red', 'brown', 'NA', 'blue', 'cyan'))
+visualize_LISA_clusters(census_sf, lisa_results_list[[9]]$gm_crime_LISA, significanceLevel = 0.05, colors = c('red', 'brown', 'NA', 'blue', 'cyan'))
+visualize_LISA_clusters(census_sf, lisa_results_list[[10]]$gm_crime_LISA, significanceLevel = 0.05, colors = c('red', 'brown', 'NA', 'blue', 'cyan'))
+```
+
+## GWR Plots
+
+```{r}
+
+
+
+
+```
+
+
+```{r}
+# Plot first 5 GWR results for each equation
+for (i in seq_along(gwr_results_list[1:5])) {
+    gwr_result <- gwr_results_list[[i]]
+    equation <- equations[[i]]
+    
+    # Extract GWR spatial data frame
+    agwr_sf <- st_as_sf(gwr_result$a.gwr$SDF)
+    
+    # Visualize GWR result
+    gwr_plot <- visualise_gwr(agwr_sf, equation)
+
+    
+    # Print GWR plot
+    print(gwr_plot)
+}
+```
+
+```{r}
+for (i in seq_along(gwr_results_list)[6:10]) {
+    gwr_result <- gwr_results_list[[i]]
+    equation <- equations[[i]]
+    
+    # Extract GWR spatial data frame
+    agwr_sf <- st_as_sf(gwr_result$a.gwr$SDF)
+    
+    # Visualize GWR result
+    gwr_plot <- visualise_gwr(agwr_sf, equation)
+    
+    # Print GWR plot
+    print(gwr_plot)
+}
+```
+```{r}
+for (i in seq_along(gwr_results_list)[1:10]) {
+    print(paste("---Equation", i, "---"))
+    gwr_result <- gwr_results_list[[i]]
+
+    print(gwr_result)
+}
+
+```
+
